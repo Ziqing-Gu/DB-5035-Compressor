@@ -32,6 +32,10 @@ My modeling approach was relatively straightforward. First, I asked Codex to bui
 <img width="1004" height="785" alt="image" src="https://github.com/user-attachments/assets/7c9b9a2b-bfaa-406c-b783-16536c27e15b" />
 <img width="1001" height="782" alt="image" src="https://github.com/user-attachments/assets/2157f389-ecea-40a8-8d90-4dbb22c7b720" />
 
+用 Plugin Doctor 校准，然后让 Codex 不断修正算法的整个过程，前后差不多花了 4 天 3 夜的时间。
+
+The entire process of calibrating the plugin with Plugin Doctor and repeatedly refining the algorithms through Codex took approximately four days and three nights from start to finish.
+
 
 截至目前，我认为插件与原型硬件的频率响应已经达到了约 99% 的一致性，瞬态表现约为 90%，而染色特征则约达到 50% 的相似度。在建模过程中，我并没有采用能够完全复制硬件染色的方法（因为我的能力有限，无法实现这一点）。相反，我让 Codex 实现了一种经典二极管饱和模型，并通过代码让染色程度随着压缩量增加而逐渐增强，从而近似模拟硬件的工作方式。
 
