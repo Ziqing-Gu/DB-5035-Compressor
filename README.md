@@ -78,6 +78,9 @@ I have also processed identical audio material through both the hardware and the
 
 The plugin already includes many features commonly found in modern commercial audio software, including A/B comparison, oversampling, and full Undo/Redo support. Recently, however, users have started requesting additional features and improvements. Given my limited development resources, I believe that open-sourcing the project is the best path forward, allowing other developers to modify, improve, and expand upon the codebase.
 
-Have Fun!
+如果你对源代码没有兴趣，只想试用一下这个插件，那么你可以直接下载 “DB-5035 Compressor 安装包 1.01 版.zip”。压缩包内包含 Windows 和 macOS 两个平台的安装程序，插件格式为 VST3。此外，macOS 版本还额外提供了 AU（Audio Unit） 格式。下载后直接双击安装即可。
+
+If you're not interested in the source code and simply want to try the plugin, you can download "DB-5035 Compressor Installer v1.01.zip" directly. The package includes installers for both Windows and macOS, with the plugin provided in VST3 format. The macOS version also includes an AU (Audio Unit) build. Simply download the package and run the installer to get started.
+
 
 Enjoy!
