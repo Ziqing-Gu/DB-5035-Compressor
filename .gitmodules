@@ -1,0 +1,3 @@
+[submodule "source-vst3-aax-projucer-ui-fixes-20260614-194248/clap-juce-extensions"]
+	path = source-vst3-aax-projucer-ui-fixes-20260614-194248/clap-juce-extensions
+	url = https://github.com/free-audio/clap-juce-extensions.git
