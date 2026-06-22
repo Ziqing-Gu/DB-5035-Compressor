@@ -24,6 +24,12 @@ This compressor is exceptionally well suited for vocals, bass, and percussion. I
 
 In recent years, the rise of AI-assisted development has enabled many audio professionals to build their own plugins using tools such as Codex and AntiGravity. This inspired me to explore plugin development myself. After discussing the process with several experienced colleagues, I decided to use Codex to help create this plugin. Yes—this plugin was developed entirely with the assistance of ChatGPT 5.5 running through Codex.
 
+我初次使用API，由于经验不足，在购买Token时浪费了一些钱。起初用Codex构建一个像模像样的压缩插件，只花了约＄4。但Vibe Coding就像吸毒，起初我只是浅尝一口。。但没想到当你的要求越来越具体、越来越高以后，需要花费的Token就会越来越多，我很后悔没有购买ChatGpt的Pro会员。。在最终完成这个插件时，我一共花费了超过＄220。。
+
+This was my first time using APIs, and due to my lack of experience, I ended up wasting some money buying tokens. At first, building a decent compression plugin with Codex only cost around $4. But Vibe Coding is addictive—at the beginning, I only dabbled in it lightly.but....
+
+I didn’t expect that as my requirements grew more specific and demanding, the token usage would keep skyrocketing. I really regret not subscribing to ChatGPT Pro. By the time I finally finished the plugin, I’d spent over $220 in total.
+
 我的建模思路非常简单：首先让 Codex 根据设备原理构建一个基础版本的插件，然后使用 Plugin Doctor 分析其频率响应、谐波染色和动态特性。接着，我会将插件与硬件之间的测量结果反馈给 Codex，让它不断修正算法，使插件与硬件在 Plugin Doctor 中的测试结果越来越接近。
 
 My modeling approach was relatively straightforward. First, I asked Codex to build an initial implementation based on the known operating principles of the hardware. Then, I analyzed the plugin using Plugin Doctor, measuring frequency response, harmonic coloration, and dynamic behavior. The resulting measurements were repeatedly compared against the hardware, and the differences were fed back into Codex so that the algorithms could be refined iteratively until the plugin's behavior closely matched the original unit.
