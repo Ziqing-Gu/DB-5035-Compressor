@@ -97,14 +97,30 @@ private:
         juce::Label* valueLabel = nullptr;
     };
 
-    struct KnobControl
+    class KnobComponent final : public juce::Component
     {
+    public:
+        KnobComponent()
+        {
+            setPaintingIsUnclipped (true);
+            addAndMakeVisible (slider);
+            addAndMakeVisible (nameLabel);
+            addAndMakeVisible (valueLabel);
+        }
+
+        void paint (juce::Graphics& g) override;
+        void resized() override;
+
         ParameterSlider slider;
-        juce::Label name;
-        juce::Label value;
+        juce::Label nameLabel;
+        juce::Label valueLabel;
         juce::Colour knobColour;
         bool stepped = false;
         std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
+        juce::StringArray scaleLabels;
+        float scaleStartAngle = 0.0f;
+        float scaleEndAngle = 0.0f;
+        int scaleTickCount = 0;
     };
 
     struct ButtonControl
@@ -144,7 +160,7 @@ private:
     };
 
     void timerCallback() override;
-    void configureKnob (KnobControl& control,
+    void configureKnob (KnobComponent& control,
                         const juce::String& parameterId,
                         const juce::String& labelText,
                         juce::Colour knobColour,
@@ -154,17 +170,10 @@ private:
     void configureButton (ButtonControl& control, const juce::String& parameterId, const juce::String& labelText);
     void configureCommandButton (CommandButtonControl& control, const juce::String& labelText);
     void layoutContent();
-    void layoutKnob (KnobControl& control, juce::Rectangle<int> bounds);
     void layoutButton (ButtonControl& control, juce::Rectangle<int> bounds);
     void layoutCommandButton (CommandButtonControl& control, juce::Rectangle<int> bounds);
     void drawHardwareFrame (juce::Graphics& g, juce::Rectangle<int> bounds);
     void drawSignature (juce::Graphics& g, juce::Rectangle<int> bounds);
-    void drawKnobScale (juce::Graphics& g,
-                        juce::Rectangle<int> bounds,
-                        const juce::StringArray& labels,
-                        float startAngle,
-                        float endAngle,
-                        int tickCount);
 
     void updateValueLabels();
     void updateUndoRedoButtons();
@@ -175,7 +184,7 @@ private:
     HardwareLookAndFeel hardwareLookAndFeel;
     FlatCommandLookAndFeel flatCommandLookAndFeel;
     juce::Component scaledContent;
-    std::array<KnobControl, 6> knobs;
+    std::array<KnobComponent, 6> knobs;
     std::array<juce::String, 6> knobParameterIds;
     std::array<ButtonControl, 3> buttons;
     std::array<juce::String, 3> buttonParameterIds;
