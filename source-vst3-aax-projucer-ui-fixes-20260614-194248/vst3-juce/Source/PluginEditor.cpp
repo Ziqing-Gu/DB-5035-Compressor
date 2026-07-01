@@ -969,19 +969,17 @@ void DB5035AudioProcessorEditor::VUMeter::setValue (float newValueDb, float newM
     minimumDb = newMinimumDb;
     maximumDb = newMaximumDb;
 
-    const auto startAngle = juce::MathConstants<float>::pi * 7.0f / 6.0f;
-    const auto endAngle = juce::MathConstants<float>::pi * 11.0f / 6.0f;
+    const auto halfSweep = 77.32f / 2.0f * juce::MathConstants<float>::pi / 180.0f;
+    const auto startAngle = juce::MathConstants<float>::pi * 1.5f - halfSweep;
+    const auto endAngle = juce::MathConstants<float>::pi * 1.5f + halfSweep;
     const auto sweep = endAngle - startAngle;
-
-    const auto meterMin = -20.0f;
-    const auto meterMax = 3.0f;
 
     float displayValue = valueDb;
 
     if (mode == Mode::reduction)
         displayValue = -valueDb;
 
-    const auto normalised = juce::jlimit (0.0f, 1.0f, (displayValue - meterMin) / (meterMax - meterMin));
+    const auto normalised = dbToNormalised (displayValue);
     targetAngle = startAngle + normalised * sweep;
 
     const auto smoothing = 0.18f;
@@ -1007,131 +1005,100 @@ void DB5035AudioProcessorEditor::VUMeter::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
     const auto w = bounds.getWidth();
-    const auto h = bounds.getHeight();
+    const auto meterW = w;
+    const auto meterH = w * 0.5f;
+    const auto meterBounds = bounds.withSizeKeepingCentre (meterW, meterH);
+    const auto centre = juce::Point<float> (meterBounds.getCentreX(), meterBounds.getBottom() + meterH * 0.30f);
+    const auto radius = meterH * 1.05f;
 
-    const auto meterSize = juce::jmin (w, h * 1.3f);
-    const auto meterBounds = bounds.withSizeKeepingCentre (meterSize, meterSize * 0.77f);
-    const auto centre = juce::Point<float> (meterBounds.getCentreX(), meterBounds.getBottom() - meterSize * 0.06f);
-    const auto radius = meterSize * 0.38f;
-
-    g.setColour (juce::Colour (0xff1a1a16));
+    g.setColour (juce::Colour (0xfff5e6b8));
     g.fillRoundedRectangle (meterBounds, 6.0f);
 
-    auto innerBg = meterBounds.reduced (3.0f);
-    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff2a2a24), innerBg.getCentre().toFloat(),
-                                              juce::Colour (0xff1e1e1a), innerBg.getBottomLeft().toFloat(), false));
-    g.fillRoundedRectangle (innerBg, 5.0f);
+    g.setColour (juce::Colour (0xff2a2520));
+    g.drawRoundedRectangle (meterBounds, 6.0f, 2.5f);
 
-    g.setColour (juce::Colour (0xff3a3a34));
-    g.drawRoundedRectangle (meterBounds, 6.0f, 1.2f);
+    juce::Graphics::ScopedSaveState clipState (g);
+    g.reduceClipRegion (meterBounds.toNearestInt());
 
-    const auto startAngle = juce::MathConstants<float>::pi * 7.0f / 6.0f;
-    const auto endAngle = juce::MathConstants<float>::pi * 11.0f / 6.0f;
+    const auto halfSweep = 77.32f / 2.0f * juce::MathConstants<float>::pi / 180.0f;
+    const auto startAngle = juce::MathConstants<float>::pi * 1.5f - halfSweep;
+    const auto endAngle = juce::MathConstants<float>::pi * 1.5f + halfSweep;
     const auto totalSweep = endAngle - startAngle;
 
     const auto isReduction = (mode == Mode::reduction);
-    const auto isInput = (mode == Mode::input);
 
     const auto arcRadius = radius;
     const auto tickOuterR = arcRadius;
-    const auto tickInnerMajorR = arcRadius - 12.0f;
-    const auto tickInnerMinorR = arcRadius - 7.0f;
-    const auto labelR = arcRadius - 20.0f;
+    const auto tickInnerR = arcRadius - 7.5f;
+    const auto arcLineR = tickInnerR;
+    const auto blackArcR = arcLineR + 0.9f;
+    const auto labelR = arcRadius + 4.0f;
 
-    struct TickMark
     {
-        float normalised;
-        juce::String label;
-        bool isMajor;
-    };
+        const auto zeroNorm = dbToNormalised (0.0f);
+        const auto zeroAngle = startAngle + zeroNorm * totalSweep;
+        const auto halfPi = juce::MathConstants<float>::halfPi;
 
-    juce::Array<TickMark> ticks;
+        juce::Path blackArc;
+        blackArc.addCentredArc (centre.x, centre.y, blackArcR, blackArcR, 0.0f, startAngle + halfPi, zeroAngle + halfPi, true);
+        g.setColour (juce::Colour (0xff2a2520));
+        g.strokePath (blackArc, juce::PathStrokeType (1.2f));
 
-    static const int dbValues[] = { -20, -15, -10, -7, -5, -3, -1, 0, 1, 2, 3 };
+        juce::Path redArc;
+        redArc.addCentredArc (centre.x, centre.y, arcLineR, arcLineR, 0.0f, zeroAngle + halfPi, endAngle + halfPi, true);
+        g.setColour (juce::Colour (0xffcc4444));
+        g.strokePath (redArc, juce::PathStrokeType (3.0f));
+    }
+
+    static const int dbValues[] = { -20, -10, -7, -5, -3, -2, -1, 0, 1, 2, 3 };
     for (int db : dbValues)
     {
-        const auto norm = (float) (db - (-20)) / (3.0f - (-20.0f));
-        ticks.add ({ norm, juce::String (db), (db % 5 == 0 || db == 0) });
-    }
-
-    for (auto& tick : ticks)
-    {
-        const auto angle = startAngle + tick.normalised * totalSweep;
+        const auto norm = dbToNormalised ((float) db);
+        const auto angle = startAngle + norm * totalSweep;
         const auto outerX = centre.x + std::cos (angle) * tickOuterR;
         const auto outerY = centre.y + std::sin (angle) * tickOuterR;
-        const auto innerR = tick.isMajor ? tickInnerMajorR : tickInnerMinorR;
-        const auto innerX = centre.x + std::cos (angle) * innerR;
-        const auto innerY = centre.y + std::sin (angle) * innerR;
+        const auto innerX = centre.x + std::cos (angle) * tickInnerR;
+        const auto innerY = centre.y + std::sin (angle) * tickInnerR;
 
-        const bool inRedZone = tick.normalised > 0.8696f;
-        g.setColour (inRedZone ? juce::Colour (0xffcc4444) : juce::Colour (0xffd6cfaa));
-        g.drawLine (innerX, innerY, outerX, outerY, tick.isMajor ? 1.8f : 0.8f);
+        const bool inRedZone = norm > dbToNormalised (0.0f);
+        g.setColour (inRedZone ? juce::Colour (0xffcc4444) : juce::Colour (0xff2a2520));
+        g.drawLine (innerX, innerY, outerX, outerY, 1.2f);
 
-        if (tick.isMajor && tick.label.isNotEmpty())
-        {
-            const auto lx = centre.x + std::cos (angle) * labelR;
-            const auto ly = centre.y + std::sin (angle) * labelR;
-            g.setFont (uiFont (8.5f, juce::Font::bold));
-            g.setColour (inRedZone ? juce::Colour (0xffcc4444) : juce::Colour (0xffc8c0a8));
-            g.drawText (tick.label,
-                        juce::roundToInt (lx) - 16, juce::roundToInt (ly) - 6, 32, 12,
-                        juce::Justification::centred);
-        }
-    }
+        const auto label = (db < 0) ? juce::String (-db) : juce::String (db);
+        const auto lx = centre.x + std::cos (angle) * labelR;
+        const auto ly = centre.y + std::sin (angle) * labelR;
+        const auto textRotation = angle + juce::MathConstants<float>::halfPi;
 
-    {
-        const auto zeroNorm = (0.0f - (-20.0f)) / 23.0f;
-        const auto redStart = startAngle + zeroNorm * totalSweep;
-        const auto halfPi = juce::MathConstants<float>::halfPi;
-        juce::Path redArc;
-        redArc.addCentredArc (centre.x, centre.y, arcRadius, arcRadius, 0.0f, redStart + halfPi, endAngle + halfPi, true);
-        g.setColour (juce::Colour (0xffcc4444).withAlpha (0.30f));
-        g.strokePath (redArc, juce::PathStrokeType (3.0f));
+        juce::Graphics::ScopedSaveState textState (g);
+        g.addTransform (juce::AffineTransform::rotation (textRotation, lx, ly));
+        g.setFont (juce::FontOptions ("Futura", 8.5f, juce::Font::plain));
+        g.setColour (inRedZone ? juce::Colour (0xffcc4444) : juce::Colour (0xff2a2520));
+        g.drawText (label,
+                     juce::roundToInt (lx) - 16, juce::roundToInt (ly) - 6, 32, 12,
+                     juce::Justification::centred);
     }
 
     g.setFont (uiFont (8.0f));
     g.setColour (juce::Colour (0xff807868));
     g.drawText ("dB",
-                juce::roundToInt (centre.x) - 16, juce::roundToInt (centre.y - radius * 0.16f), 32, 12,
-                juce::Justification::centred);
+                 juce::roundToInt (centre.x) - 16, juce::roundToInt (centre.y - radius * 0.16f), 32, 12,
+                 juce::Justification::centred);
 
     const auto needleAngle = smoothedAngle;
     const auto needleLength = arcRadius - 2.0f;
-    const auto needleTip = juce::Point<float> (centre.x + std::cos (needleAngle) * needleLength,
-                                                centre.y + std::sin (needleAngle) * needleLength);
-    const auto needleTail = juce::Point<float> (centre.x - std::cos (needleAngle) * (radius * 0.15f),
-                                                 centre.y - std::sin (needleAngle) * (radius * 0.15f));
-
-    const auto perpX = -std::sin (needleAngle);
-    const auto perpY = std::cos (needleAngle);
-    const auto halfBase = 1.6f;
-
-    juce::Path needlePath;
-    needlePath.startNewSubPath (needleTip);
-    needlePath.lineTo (centre.x + perpX * halfBase, centre.y + perpY * halfBase);
-    needlePath.lineTo (needleTail);
-    needlePath.lineTo (centre.x - perpX * halfBase, centre.y - perpY * halfBase);
-    needlePath.closeSubPath();
-
-    g.setColour (juce::Colour (0xff111111));
-    g.fillPath (needlePath, juce::AffineTransform::translation (1.0f, 1.5f));
+    const auto needleTipX = centre.x + std::cos (needleAngle) * needleLength;
+    const auto needleTipY = centre.y + std::sin (needleAngle) * needleLength;
 
     g.setColour (juce::Colour (0xff1a1a1a));
-    g.fillPath (needlePath);
-
-    const auto pivotRadius = 4.5f;
-    g.setColour (juce::Colour (0xff2a2a2a));
-    g.fillEllipse (centre.x - pivotRadius, centre.y - pivotRadius, pivotRadius * 2.0f, pivotRadius * 2.0f);
-    g.setColour (juce::Colour (0xff444440));
-    g.drawEllipse (centre.x - pivotRadius, centre.y - pivotRadius, pivotRadius * 2.0f, pivotRadius * 2.0f, 0.8f);
+    g.drawLine (centre.x, centre.y, needleTipX, needleTipY, 1.0f);
 
     g.setFont (monoFont (10.0f, juce::Font::bold));
-    g.setColour (juce::Colour (0xffc8c0a8));
+    g.setColour (juce::Colour (0xff2a2520));
     juce::String valueLabel;
     if (isReduction)
         valueLabel = juce::String (valueDb, 1) + (showPeakHold ? " | " + juce::String (heldPeakDb, 1) : "") + " dB";
     else
         valueLabel = juce::String (valueDb, 1) + " dB";
-    g.drawText (valueLabel, meterBounds.getBottomLeft().getX(), juce::roundToInt (meterBounds.getBottom() - 16), juce::roundToInt (meterBounds.getWidth()), 14,
+    g.drawText (valueLabel, juce::roundToInt (meterBounds.getX()), juce::roundToInt (meterBounds.getBottom() - 16.0f), juce::roundToInt (meterBounds.getWidth()), 14,
                 juce::Justification::centred);
 }

@@ -53,6 +53,16 @@ private:
         std::function<void()> onResetPeak;
 
     private:
+        static float dbToNormalised (float dB)
+        {
+            constexpr auto meterMin = -20.0f;
+            constexpr auto meterMax = 3.0f;
+            const auto levelMin = std::pow (10.0f, meterMin / 20.0f);
+            const auto levelMax = std::pow (10.0f, meterMax / 20.0f);
+            const auto level = std::pow (10.0f, juce::jlimit (meterMin, meterMax, dB) / 20.0f);
+            return (level - levelMin) / (levelMax - levelMin);
+        }
+
         float valueDb = -80.0f;
         float minimumDb = -80.0f;
         float maximumDb = 6.0f;
