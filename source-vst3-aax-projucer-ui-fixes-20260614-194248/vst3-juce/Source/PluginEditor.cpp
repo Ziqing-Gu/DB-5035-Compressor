@@ -486,7 +486,7 @@ void DB5035AudioProcessorEditor::paint (juce::Graphics& g)
     auto module = panelBounds.reduced (30);
     module.removeFromTop (36);
     auto controls = module;
-    const auto meterWidth = 150;
+    const auto meterWidth = 240;
     controls.removeFromRight (meterWidth + 18);
 
     g.setColour (line.withAlpha (0.95f));
@@ -526,11 +526,11 @@ void DB5035AudioProcessorEditor::layoutContent()
     auto bounds = juce::Rectangle<int> (0, commandStripHeight, designWidth, designHeight - commandStripHeight).reduced (30);
     bounds.removeFromTop (84);
 
-    const auto meterWidth = 150;
+    const auto meterWidth = 240;
     auto rightArea = bounds.removeFromRight (meterWidth).reduced (8, 16);
-    rightArea.removeFromTop (50);
+    rightArea.removeFromTop (20);
 
-    vuMeter.setBounds (rightArea.removeFromTop (200));
+    vuMeter.setBounds (rightArea.removeFromTop (280));
     rightArea.removeFromTop (4);
     vuModeButton.setBounds (rightArea.removeFromTop (24).withSizeKeepingCentre (60, 22));
 
@@ -544,13 +544,26 @@ void DB5035AudioProcessorEditor::layoutContent()
     layoutButton (buttons[2], topButtons.removeFromLeft (96).reduced (8, 0));
 
     bounds.removeFromTop (58);
-    auto knobArea = bounds.withHeight (250);
-    const auto knobWidth = knobArea.getWidth() / 6;
+
+    const auto knobCellW = 155;
+    const auto knobCellH = 150;
+    const auto availW = (float) bounds.getWidth();
+    const auto availH = (float) bounds.getHeight();
+    const auto colSpacing = (availW - 1.75f * knobCellW) / 2.0f;
+    const auto knobYOff = 75;
+    const auto totalH = knobYOff + knobCellH;
+    const auto yStart = juce::roundToInt ((availH - totalH) / 2.0f);
+    const auto xStart = bounds.getX() + juce::roundToInt (knobCellW * 0.25f);
+
+    static const int knobOrder[] = { 4, 0, 1, 2, 3, 5 };
 
     for (size_t i = 0; i < knobs.size(); ++i)
     {
-        auto cell = knobArea.removeFromLeft (knobWidth).reduced (2, 0);
-        knobs[i].setBounds (cell);
+        const auto col = i / 2;
+        const auto upper = (i % 2 == 0);
+        const auto x = xStart + juce::roundToInt (col * colSpacing + (upper ? 0.0f : knobCellW * 0.5f));
+        const auto y = bounds.getY() + yStart + (upper ? 0 : knobYOff);
+        knobs[knobOrder[i]].setBounds (x, y, knobCellW, knobCellH);
     }
 }
 
@@ -667,7 +680,7 @@ void DB5035AudioProcessorEditor::KnobComponent::paint (juce::Graphics& g)
     auto bounds = getLocalBounds();
     bounds.removeFromBottom (28);
     bounds.removeFromBottom (24);
-    auto dialBounds = bounds.reduced (24, 16);
+    auto dialBounds = bounds.reduced (26, 18);
     dialBounds.translate (0, -18);
     const auto dial = dialBounds.toFloat();
     const auto centre = dial.getCentre();
@@ -716,7 +729,7 @@ void DB5035AudioProcessorEditor::KnobComponent::resized()
     auto bounds = getLocalBounds();
     nameLabel.setBounds (bounds.removeFromBottom (28));
     valueLabel.setBounds (bounds.removeFromBottom (24));
-    auto sliderBounds = bounds.reduced (24, 16);
+    auto sliderBounds = bounds.reduced (26, 18);
     sliderBounds.translate (0, -18);
     slider.setBounds (sliderBounds);
 }
