@@ -375,20 +375,43 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
         }
     };
 
-    styleLabel (inputMeterLabel, "INPUT", juce::Justification::centredLeft);
-    styleLabel (gainReductionMeterLabel, "REDUCTION", juce::Justification::centredLeft);
-    styleLabel (outputMeterLabel, "OUTPUT", juce::Justification::centredLeft);
+    vuModeButton.setButtonText ("OUT");
+    vuModeButton.setClickingTogglesState (false);
+    vuModeButton.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff1c1d1b));
+    vuModeButton.setColour (juce::TextButton::buttonOnColourId, cream);
+    vuModeButton.setColour (juce::TextButton::textColourOffId, cream);
+    vuModeButton.onClick = [this]
+    {
+        const auto currentMode = vuMeter.getMode();
+        VUMeter::Mode nextMode;
+        juce::String nextLabel;
 
-    scaledContent.addAndMakeVisible (inputMeterLabel);
-    scaledContent.addAndMakeVisible (gainReductionMeterLabel);
-    scaledContent.addAndMakeVisible (outputMeterLabel);
-    scaledContent.addAndMakeVisible (inputMeter);
-    scaledContent.addAndMakeVisible (gainReductionMeter);
-    scaledContent.addAndMakeVisible (outputMeter);
-    gainReductionMeter.onResetPeak = [this]
+        if (currentMode == VUMeter::Mode::input)
+        {
+            nextMode = VUMeter::Mode::output;
+            nextLabel = "OUT";
+        }
+        else if (currentMode == VUMeter::Mode::output)
+        {
+            nextMode = VUMeter::Mode::reduction;
+            nextLabel = "RED";
+        }
+        else
+        {
+            nextMode = VUMeter::Mode::input;
+            nextLabel = "IN";
+        }
+
+        vuMeter.setMode (nextMode);
+        vuModeButton.setButtonText (nextLabel);
+    };
+
+    scaledContent.addAndMakeVisible (vuMeter);
+    scaledContent.addAndMakeVisible (vuModeButton);
+    vuMeter.onResetPeak = [this]
     {
         gainReductionPeakHoldDb = 0.0f;
-        gainReductionMeter.setPeakHold (0.0f);
+        vuMeter.setPeakHold (0.0f);
     };
     addChildComponent (helpOverlay);
 
@@ -477,20 +500,10 @@ void DB5035AudioProcessorEditor::layoutContent()
     const auto meterWidth = 150;
     auto rightArea = bounds.removeFromRight (meterWidth).reduced (8, 16);
     rightArea.removeFromTop (50);
-    auto meterArea = rightArea.removeFromTop (172);
-    auto inputArea = meterArea.removeFromTop (50);
-    auto outputArea = meterArea.removeFromTop (50);
-    auto reductionArea = meterArea.removeFromTop (50);
 
-    auto placeMeter = [] (juce::Label& label, MeterBar& meter, juce::Rectangle<int> area)
-    {
-        label.setBounds (area.removeFromTop (18));
-        meter.setBounds (area.reduced (0, 6));
-    };
-
-    placeMeter (inputMeterLabel, inputMeter, inputArea);
-    placeMeter (outputMeterLabel, outputMeter, outputArea);
-    placeMeter (gainReductionMeterLabel, gainReductionMeter, reductionArea);
+    vuMeter.setBounds (rightArea.removeFromTop (200));
+    rightArea.removeFromTop (4);
+    vuModeButton.setBounds (rightArea.removeFromTop (24).withSizeKeepingCentre (60, 22));
 
     bounds.removeFromRight (18);
     auto leftInset = bounds.removeFromLeft (124);
@@ -525,11 +538,21 @@ void DB5035AudioProcessorEditor::layoutContent()
 void DB5035AudioProcessorEditor::timerCallback()
 {
     const auto meters = audioProcessor.getMeters();
-    inputMeter.setValue (meters.inputDb, -60.0f, 6.0f, false);
     gainReductionPeakHoldDb = juce::jmax (gainReductionPeakHoldDb, meters.gainReductionDb);
-    gainReductionMeter.setPeakHold (gainReductionPeakHoldDb);
-    gainReductionMeter.setValue (meters.gainReductionDb, 0.0f, 24.0f, true);
-    outputMeter.setValue (meters.outputDb, -60.0f, 6.0f, false);
+
+    switch (vuMeter.getMode())
+    {
+        case VUMeter::Mode::input:
+            vuMeter.setValue (meters.inputDb, -20.0f, 3.0f);
+            break;
+        case VUMeter::Mode::output:
+            vuMeter.setValue (meters.outputDb, -20.0f, 3.0f);
+            break;
+        case VUMeter::Mode::reduction:
+            vuMeter.setPeakHold (gainReductionPeakHoldDb);
+            vuMeter.setValue (meters.gainReductionDb, 0.0f, 24.0f);
+            break;
+    }
     updateValueLabels();
     updateUndoRedoButtons();
     updateCompareButtons();
@@ -919,58 +942,185 @@ void DB5035AudioProcessorEditor::HardwareLookAndFeel::drawButtonText (juce::Grap
     g.drawText (button.getButtonText(), button.getLocalBounds(), juce::Justification::centred);
 }
 
-void DB5035AudioProcessorEditor::MeterBar::setValue (float newValueDb, float newMinimumDb, float newMaximumDb, bool isReductionMeter)
+void DB5035AudioProcessorEditor::VUMeter::setMode (Mode newMode)
+{
+    mode = newMode;
+    repaint();
+}
+
+void DB5035AudioProcessorEditor::VUMeter::setValue (float newValueDb, float newMinimumDb, float newMaximumDb)
 {
     valueDb = newValueDb;
     minimumDb = newMinimumDb;
     maximumDb = newMaximumDb;
-    reduction = isReductionMeter;
+
+    const auto startAngle = juce::MathConstants<float>::pi * 7.0f / 6.0f;
+    const auto endAngle = juce::MathConstants<float>::pi * 11.0f / 6.0f;
+    const auto sweep = endAngle - startAngle;
+
+    const auto meterMin = -20.0f;
+    const auto meterMax = 3.0f;
+
+    float displayValue = valueDb;
+
+    if (mode == Mode::reduction)
+        displayValue = -valueDb;
+
+    const auto normalised = juce::jlimit (0.0f, 1.0f, (displayValue - meterMin) / (meterMax - meterMin));
+    targetAngle = startAngle + normalised * sweep;
+
+    const auto smoothing = 0.18f;
+    smoothedAngle += (targetAngle - smoothedAngle) * smoothing;
+
     repaint();
 }
 
-void DB5035AudioProcessorEditor::MeterBar::setPeakHold (float newPeakDb)
+void DB5035AudioProcessorEditor::VUMeter::setPeakHold (float newPeakDb)
 {
     heldPeakDb = newPeakDb;
     showPeakHold = true;
     repaint();
 }
 
-void DB5035AudioProcessorEditor::MeterBar::mouseDown (const juce::MouseEvent& event)
+void DB5035AudioProcessorEditor::VUMeter::mouseDown (const juce::MouseEvent& event)
 {
-    if (reduction && event.mods.isLeftButtonDown() && onResetPeak)
+    if (mode == Mode::reduction && event.mods.isLeftButtonDown() && onResetPeak)
         onResetPeak();
 }
 
-void DB5035AudioProcessorEditor::MeterBar::paint (juce::Graphics& g)
+void DB5035AudioProcessorEditor::VUMeter::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
-    g.setColour (panelDark);
-    g.fillRoundedRectangle (bounds, 4.0f);
-    g.setColour (line.withAlpha (0.45f));
-    g.drawRoundedRectangle (bounds, 4.0f, 1.0f);
+    const auto w = bounds.getWidth();
+    const auto h = bounds.getHeight();
 
-    const auto meterBounds = bounds.reduced (3.0f);
-    const auto normalised = juce::jlimit (0.0f, 1.0f, (valueDb - minimumDb) / (maximumDb - minimumDb));
-    auto fill = meterBounds;
-    fill.setWidth (meterBounds.getWidth() * normalised);
+    const auto meterSize = juce::jmin (w, h * 1.3f);
+    const auto meterBounds = bounds.withSizeKeepingCentre (meterSize, meterSize * 0.77f);
+    const auto centre = juce::Point<float> (meterBounds.getCentreX(), meterBounds.getBottom() - meterSize * 0.06f);
+    const auto radius = meterSize * 0.38f;
 
-    if (reduction)
-        fill.setX (meterBounds.getRight() - fill.getWidth());
+    g.setColour (juce::Colour (0xff1a1a16));
+    g.fillRoundedRectangle (meterBounds, 6.0f);
 
-    g.setColour (reduction ? red : green);
-    g.fillRoundedRectangle (fill, 3.0f);
+    auto innerBg = meterBounds.reduced (3.0f);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff2a2a24), innerBg.getCentre().toFloat(),
+                                              juce::Colour (0xff1e1e1a), innerBg.getBottomLeft().toFloat(), false));
+    g.fillRoundedRectangle (innerBg, 5.0f);
 
-    if (reduction && showPeakHold)
+    g.setColour (juce::Colour (0xff3a3a34));
+    g.drawRoundedRectangle (meterBounds, 6.0f, 1.2f);
+
+    const auto startAngle = juce::MathConstants<float>::pi * 7.0f / 6.0f;
+    const auto endAngle = juce::MathConstants<float>::pi * 11.0f / 6.0f;
+    const auto totalSweep = endAngle - startAngle;
+
+    const auto isReduction = (mode == Mode::reduction);
+    const auto isInput = (mode == Mode::input);
+
+    const auto arcRadius = radius;
+    const auto tickOuterR = arcRadius;
+    const auto tickInnerMajorR = arcRadius - 12.0f;
+    const auto tickInnerMinorR = arcRadius - 7.0f;
+    const auto labelR = arcRadius - 20.0f;
+
+    struct TickMark
     {
-        const auto peakNormalised = juce::jlimit (0.0f, 1.0f, (heldPeakDb - minimumDb) / (maximumDb - minimumDb));
-        const auto peakX = meterBounds.getRight() - meterBounds.getWidth() * peakNormalised;
-        g.setColour (cream.withAlpha (0.88f));
-        g.drawLine (peakX, meterBounds.getY(), peakX, meterBounds.getBottom(), 1.6f);
+        float normalised;
+        juce::String label;
+        bool isMajor;
+    };
+
+    juce::Array<TickMark> ticks;
+
+    static const int dbValues[] = { -20, -15, -10, -7, -5, -3, -1, 0, 1, 2, 3 };
+    for (int db : dbValues)
+    {
+        const auto norm = (float) (db - (-20)) / (3.0f - (-20.0f));
+        ticks.add ({ norm, juce::String (db), (db % 5 == 0 || db == 0) });
     }
 
-    g.setColour (text);
-    g.setFont (uiFont (11.0f, juce::Font::bold));
-    const auto label = reduction ? juce::String (std::abs (valueDb), 1) + " | " + juce::String (std::abs (heldPeakDb), 1) + " dB"
-                                 : juce::String (valueDb, 1) + " dBFS";
-    g.drawText (label, getLocalBounds().reduced (8, 0), juce::Justification::centredRight);
+    for (auto& tick : ticks)
+    {
+        const auto angle = startAngle + tick.normalised * totalSweep;
+        const auto outerX = centre.x + std::cos (angle) * tickOuterR;
+        const auto outerY = centre.y + std::sin (angle) * tickOuterR;
+        const auto innerR = tick.isMajor ? tickInnerMajorR : tickInnerMinorR;
+        const auto innerX = centre.x + std::cos (angle) * innerR;
+        const auto innerY = centre.y + std::sin (angle) * innerR;
+
+        const bool inRedZone = tick.normalised > 0.8696f;
+        g.setColour (inRedZone ? juce::Colour (0xffcc4444) : juce::Colour (0xffd6cfaa));
+        g.drawLine (innerX, innerY, outerX, outerY, tick.isMajor ? 1.8f : 0.8f);
+
+        if (tick.isMajor && tick.label.isNotEmpty())
+        {
+            const auto lx = centre.x + std::cos (angle) * labelR;
+            const auto ly = centre.y + std::sin (angle) * labelR;
+            g.setFont (uiFont (8.5f, juce::Font::bold));
+            g.setColour (inRedZone ? juce::Colour (0xffcc4444) : juce::Colour (0xffc8c0a8));
+            g.drawText (tick.label,
+                        juce::roundToInt (lx) - 16, juce::roundToInt (ly) - 6, 32, 12,
+                        juce::Justification::centred);
+        }
+    }
+
+    {
+        const auto zeroNorm = (0.0f - (-20.0f)) / 23.0f;
+        const auto redStart = startAngle + zeroNorm * totalSweep;
+        juce::Path redArc;
+        redArc.addCentredArc (centre.x, centre.y, arcRadius, arcRadius, 0.0f, redStart, endAngle, true);
+        g.setColour (juce::Colour (0xffcc4444).withAlpha (0.30f));
+        g.strokePath (redArc, juce::PathStrokeType (3.0f));
+    }
+
+    g.setFont (uiFont (10.0f, juce::Font::bold));
+    g.setColour (juce::Colour (0xffa09880));
+    const auto modeLabel = isInput ? "INPUT" : (isReduction ? "REDUCTION" : "OUTPUT");
+    g.drawText (modeLabel, juce::roundToInt (centre.x) - 40, juce::roundToInt (centre.y - radius * 0.35f), 80, 14, juce::Justification::centred);
+
+    g.setFont (uiFont (8.0f));
+    g.setColour (juce::Colour (0xff807868));
+    g.drawText ("dB",
+                juce::roundToInt (centre.x) - 16, juce::roundToInt (centre.y - radius * 0.16f), 32, 12,
+                juce::Justification::centred);
+
+    const auto needleAngle = smoothedAngle;
+    const auto needleLength = arcRadius - 2.0f;
+    const auto needleTip = juce::Point<float> (centre.x + std::cos (needleAngle) * needleLength,
+                                                centre.y + std::sin (needleAngle) * needleLength);
+    const auto needleTail = juce::Point<float> (centre.x - std::cos (needleAngle) * (radius * 0.15f),
+                                                 centre.y - std::sin (needleAngle) * (radius * 0.15f));
+
+    const auto perpX = -std::sin (needleAngle);
+    const auto perpY = std::cos (needleAngle);
+    const auto halfBase = 1.6f;
+
+    juce::Path needlePath;
+    needlePath.startNewSubPath (needleTip);
+    needlePath.lineTo (centre.x + perpX * halfBase, centre.y + perpY * halfBase);
+    needlePath.lineTo (needleTail);
+    needlePath.lineTo (centre.x - perpX * halfBase, centre.y - perpY * halfBase);
+    needlePath.closeSubPath();
+
+    g.setColour (juce::Colour (0xff111111));
+    g.fillPath (needlePath, juce::AffineTransform::translation (1.0f, 1.5f));
+
+    g.setColour (juce::Colour (0xff1a1a1a));
+    g.fillPath (needlePath);
+
+    const auto pivotRadius = 4.5f;
+    g.setColour (juce::Colour (0xff2a2a2a));
+    g.fillEllipse (centre.x - pivotRadius, centre.y - pivotRadius, pivotRadius * 2.0f, pivotRadius * 2.0f);
+    g.setColour (juce::Colour (0xff444440));
+    g.drawEllipse (centre.x - pivotRadius, centre.y - pivotRadius, pivotRadius * 2.0f, pivotRadius * 2.0f, 0.8f);
+
+    g.setFont (monoFont (10.0f, juce::Font::bold));
+    g.setColour (juce::Colour (0xffc8c0a8));
+    juce::String valueLabel;
+    if (isReduction)
+        valueLabel = juce::String (valueDb, 1) + (showPeakHold ? " | " + juce::String (heldPeakDb, 1) : "") + " dB";
+    else
+        valueLabel = juce::String (valueDb, 1) + " dB";
+    g.drawText (valueLabel, meterBounds.getBottomLeft().getX(), juce::roundToInt (meterBounds.getBottom() - 16), juce::roundToInt (meterBounds.getWidth()), 14,
+                juce::Justification::centred);
 }

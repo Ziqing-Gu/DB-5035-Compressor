@@ -39,10 +39,13 @@ private:
         void drawButtonText (juce::Graphics&, juce::TextButton&, bool, bool) override;
     };
 
-    class MeterBar final : public juce::Component
+    class VUMeter final : public juce::Component
     {
     public:
-        void setValue (float newValueDb, float newMinimumDb, float newMaximumDb, bool isReductionMeter);
+        enum class Mode { input, output, reduction };
+        void setMode (Mode newMode);
+        Mode getMode() const { return mode; }
+        void setValue (float newValueDb, float newMinimumDb, float newMaximumDb);
         void setPeakHold (float newPeakDb);
         void paint (juce::Graphics& g) override;
         void mouseDown (const juce::MouseEvent& event) override;
@@ -55,7 +58,9 @@ private:
         float maximumDb = 6.0f;
         float heldPeakDb = 0.0f;
         bool showPeakHold = false;
-        bool reduction = false;
+        Mode mode = Mode::output;
+        float smoothedAngle = 0.0f;
+        float targetAngle = 0.0f;
     };
 
     class ParameterSlider final : public juce::Slider
@@ -153,12 +158,8 @@ private:
     CommandButtonControl helpButton;
     CommandButtonControl oversamplingButton;
     HelpOverlay helpOverlay;
-    MeterBar inputMeter;
-    MeterBar gainReductionMeter;
-    MeterBar outputMeter;
-    juce::Label inputMeterLabel;
-    juce::Label gainReductionMeterLabel;
-    juce::Label outputMeterLabel;
+    VUMeter vuMeter;
+    juce::TextButton vuModeButton;
     float gainReductionPeakHoldDb = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DB5035AudioProcessorEditor)
