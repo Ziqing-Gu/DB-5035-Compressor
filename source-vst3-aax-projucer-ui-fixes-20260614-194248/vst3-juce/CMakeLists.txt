@@ -20,6 +20,8 @@ else()
     add_subdirectory("${DB5035_JUCE_PATH}" JUCE)
 endif()
 
+add_subdirectory(../clap-juce-extensions clap-juce-extensions)
+
 juce_add_plugin(DB5035Compressor
     COMPANY_NAME "Codex Audio"
     BUNDLE_ID "com.codexaudio.db5035qingcompressor"
@@ -31,9 +33,15 @@ juce_add_plugin(DB5035Compressor
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE CdxA
     PLUGIN_CODE Db3Q
-    FORMATS VST3 AAX Standalone
+    FORMATS VST3 AAX Standalone CLAP
     AAX_CATEGORY AAX_ePlugInCategory_Dynamics
     PRODUCT_NAME "DB-5035 Qing Compressor"
+)
+
+clap_juce_extensions_plugin(
+    TARGET DB5035Compressor
+    CLAP_ID "com.codexaudio.qing-compressor"
+    CLAP_FEATURES audio-effect stereo
 )
 
 juce_generate_juce_header(DB5035Compressor)
@@ -64,6 +72,7 @@ target_link_libraries(DB5035Compressor
     PRIVATE
         juce::juce_audio_utils
         juce::juce_dsp
+        clap_juce_extensions
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
