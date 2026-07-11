@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 project(DB5035Compressor VERSION 0.1.0)
 
 option(DB5035_FETCH_JUCE "Download JUCE with CMake FetchContent" ON)
+option(DB5035_ENABLE_VINTAGE_UI "Build the optional hardware-inspired UI and its resources" ON)
 set(DB5035_JUCE_PATH "" CACHE PATH "Path to a local JUCE checkout when DB5035_FETCH_JUCE is OFF")
 
 if(DB5035_FETCH_JUCE)
@@ -42,14 +43,16 @@ clap_juce_extensions_plugin(
     TARGET DB5035Compressor
     CLAP_ID "com.codexaudio.qing-compressor"
     CLAP_FEATURES audio-effect stereo
- )
-
-juce_add_binary_data(DB5035Resources
-    SOURCES
-        Source/Resources/panel.png
-        Source/Resources/OpenSans-Regular.ttf
-        Source/Resources/OpenSans-LightItalic.ttf
 )
+
+if(DB5035_ENABLE_VINTAGE_UI)
+    juce_add_binary_data(DB5035Resources
+        SOURCES
+            Source/Resources/panel.png
+            Source/Resources/OpenSans-Regular.ttf
+            Source/Resources/OpenSans-LightItalic.ttf
+    )
+endif()
 
 juce_generate_juce_header(DB5035Compressor)
 
@@ -73,11 +76,11 @@ target_compile_definitions(DB5035Compressor
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
+        DB5035_ENABLE_VINTAGE_UI=$<BOOL:${DB5035_ENABLE_VINTAGE_UI}>
 )
 
 target_link_libraries(DB5035Compressor
     PRIVATE
-        DB5035Resources
         juce::juce_audio_utils
         juce::juce_dsp
         clap_juce_extensions
@@ -86,3 +89,7 @@ target_link_libraries(DB5035Compressor
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+if(DB5035_ENABLE_VINTAGE_UI)
+    target_link_libraries(DB5035Compressor PRIVATE DB5035Resources)
+endif()

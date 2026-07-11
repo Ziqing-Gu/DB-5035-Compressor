@@ -242,6 +242,7 @@ void DB5035AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     auto stateTree = parameters.copyState();
     stateTree.appendChild (createCompareStateTree(), nullptr);
     stateTree.setProperty ("vuMode", vuMode, nullptr);
+    stateTree.setProperty ("uiStyle", uiStyle, nullptr);
 
     if (auto state = stateTree.createXml())
         copyXmlToBinary (*state, destData);
@@ -260,13 +261,6 @@ void DB5035AudioProcessor::setStateInformation (const void* data, int sizeInByte
 
             parameters.replaceState (stateTree);
 
-            if (auto* compInParam = parameters.getParameter (ParamID::compIn))
-            {
-                compInParam->beginChangeGesture();
-                compInParam->setValueNotifyingHost (compInParam->convertTo0to1 (1.0f));
-                compInParam->endChangeGesture();
-            }
-
             if (compareState.isValid())
                 restoreCompareStateTree (compareState);
             else
@@ -274,6 +268,9 @@ void DB5035AudioProcessor::setStateInformation (const void* data, int sizeInByte
 
             if (stateTree.hasProperty ("vuMode"))
                 vuMode = (int) stateTree.getProperty ("vuMode");
+
+            if (stateTree.hasProperty ("uiStyle"))
+                uiStyle = juce::jlimit (0, 1, (int) stateTree.getProperty ("uiStyle"));
         }
 }
 

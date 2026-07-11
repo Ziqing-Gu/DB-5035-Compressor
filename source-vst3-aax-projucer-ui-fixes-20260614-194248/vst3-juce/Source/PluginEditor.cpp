@@ -1,5 +1,12 @@
 #include "PluginEditor.h"
+
+#ifndef DB5035_ENABLE_VINTAGE_UI
+ #define DB5035_ENABLE_VINTAGE_UI 1
+#endif
+
+#if DB5035_ENABLE_VINTAGE_UI
 #include "BinaryData.h"
+#endif
 
 #include <cmath>
 #include <cstdlib>
@@ -19,12 +26,29 @@ namespace
     const auto creamKnob = juce::Colour (0xffccd1db);
     const auto amber = juce::Colour (0xffffcc22);
     const auto green = juce::Colour (0xff22ee22);
+    const auto classicBackground = juce::Colour (0xff12120f);
+    const auto classicPanel = juce::Colour (0xff30312d);
+    const auto classicPanelTop = juce::Colour (0xff41423d);
+    const auto classicPanelDark = juce::Colour (0xff20211d);
+    const auto classicLine = juce::Colour (0xffcbc7bb);
+    const auto classicText = juce::Colour (0xffeee8d8);
+    const auto classicMuted = juce::Colour (0xffd6d0bf);
+    const auto classicCream = juce::Colour (0xffe6dfc5);
+    const auto classicBlackKnob = juce::Colour (0xff171817);
+    const auto classicRedKnob = juce::Colour (0xffc74743);
+    const auto classicAmber = juce::Colour (0xffd4aa55);
+    const auto classicGreen = juce::Colour (0xff58a07f);
+    const auto classicRed = juce::Colour (0xffd65245);
 
     constexpr auto rotaryStart = juce::MathConstants<float>::pi * 20.f / 30.f;
     constexpr auto rotaryEnd = juce::MathConstants<float>::pi * 70.f / 30.f;
+    constexpr auto classicRotaryStart = juce::MathConstants<float>::pi * 0.78f;
+    constexpr auto classicRotaryEnd = juce::MathConstants<float>::pi * 2.22f;
     constexpr int designWidth = 1200;
     constexpr int designHeight = 199;
     constexpr int commandStripHeight = 28;
+    constexpr int classicDesignWidth = 1120;
+    constexpr int classicDesignHeight = 450;
 
     float getContentScale (juce::Rectangle<int> bounds)
     {
@@ -35,6 +59,15 @@ namespace
     {
         const auto scale = getContentScale (bounds);
         return juce::AffineTransform::scale (scale).translated (0.0f, (float) commandStripHeight);
+    }
+
+    juce::AffineTransform getClassicContentTransform (juce::Rectangle<int> bounds)
+    {
+        const auto scale = juce::jmin ((float) bounds.getWidth() / (float) classicDesignWidth,
+                                       (float) bounds.getHeight() / (float) classicDesignHeight);
+        const auto offsetX = ((float) bounds.getWidth() - (float) classicDesignWidth * scale) * 0.5f;
+        const auto offsetY = ((float) bounds.getHeight() - (float) classicDesignHeight * scale) * 0.5f;
+        return juce::AffineTransform::scale (scale).translated (offsetX, offsetY);
     }
 
     juce::String uiTypefaceName()
@@ -70,6 +103,7 @@ namespace
        #endif
     }
 
+   #if DB5035_ENABLE_VINTAGE_UI
     juce::Typeface::Ptr sourceSansRegular()
     {
         static auto typeface = juce::Typeface::createSystemTypefaceFor (BinaryData::OpenSansRegular_ttf, BinaryData::OpenSansRegular_ttfSize);
@@ -96,6 +130,17 @@ namespace
         f.setHeight (size * 1.2f);
         return f;
     }
+   #else
+    juce::Font sourceSansFont (float size, int styleFlags = juce::Font::plain)
+    {
+        return juce::Font (juce::FontOptions (uiTypefaceName(), size * 1.2f, styleFlags));
+    }
+
+    juce::Font sourceSansLightItalicFont (float size)
+    {
+        return juce::Font (juce::FontOptions (uiTypefaceName(), size * 1.2f, juce::Font::italic));
+    }
+   #endif
 
     juce::FontOptions uiFont (float size, int styleFlags = juce::Font::plain)
     {
@@ -421,6 +466,18 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
         }
     };
 
+    uiStyleButton.setClickingTogglesState (false);
+    uiStyleButton.setLookAndFeel (&flatCommandLookAndFeel);
+    uiStyleButton.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff1c1d1b));
+    uiStyleButton.setColour (juce::TextButton::textColourOffId, cream);
+    uiStyleButton.onClick = [this]
+    {
+        const auto next = uiStyle == UiStyle::classic ? UiStyle::vintage : UiStyle::classic;
+        audioProcessor.setUiStyle ((int) next);
+        applyUiStyle (next, true);
+    };
+    addAndMakeVisible (uiStyleButton);
+
     for (auto& hb : historyButtons)
     {
         hb.button.setLookAndFeel (&flatCommandLookAndFeel);
@@ -465,7 +522,18 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
 
     scaledContent.addAndMakeVisible (vuMeter);
     scaledContent.addAndMakeVisible (vuModeButton);
+    styleLabel (inputMeterLabel, "INPUT", juce::Justification::centredLeft);
+    styleLabel (gainReductionMeterLabel, "REDUCTION", juce::Justification::centredLeft);
+    styleLabel (outputMeterLabel, "OUTPUT", juce::Justification::centredLeft);
+    scaledContent.addAndMakeVisible (inputMeterLabel);
+    scaledContent.addAndMakeVisible (gainReductionMeterLabel);
+    scaledContent.addAndMakeVisible (outputMeterLabel);
+    scaledContent.addAndMakeVisible (inputMeter);
+    scaledContent.addAndMakeVisible (gainReductionMeter);
+    scaledContent.addAndMakeVisible (outputMeter);
 
+
+   #if DB5035_ENABLE_VINTAGE_UI
     auto panelImage = juce::ImageFileFormat::loadFrom (BinaryData::panel_png, BinaryData::panel_pngSize);
     if (panelImage.isValid())
     {
@@ -475,6 +543,7 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
         scaledContent.addAndMakeVisible (panelOverlay);
         panelOverlay.toFront (false);
     }
+   #endif
 
     scaledContent.addAndMakeVisible (textOverlay);
     textOverlay.setPaintingIsUnclipped (true);
@@ -483,13 +552,22 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
         gainReductionPeakHoldDb = 0.0f;
         vuMeter.setPeakHold (0.0f);
     };
+    gainReductionMeter.onResetPeak = [this]
+    {
+        gainReductionPeakHoldDb = 0.0f;
+        gainReductionMeter.setPeakHold (0.0f);
+    };
+
     addChildComponent (helpOverlay);
 
-    setLookAndFeel (&hardwareLookAndFeel);
     setResizable (true, true);
-    setResizeLimits (400, 100, 1920, 1200);
+    panelConstrainer.setSizeLimits (400, 100, 1920, 1200);
     setConstrainer (&panelConstrainer);
-    setSize (designWidth, designHeight + commandStripHeight);
+    auto initialStyle = audioProcessor.getUiStyle() == (int) UiStyle::vintage ? UiStyle::vintage : UiStyle::classic;
+   #if ! DB5035_ENABLE_VINTAGE_UI
+    initialStyle = UiStyle::classic;
+   #endif
+    applyUiStyle (initialStyle, true);
     startTimerHz (30);
     updateValueLabels();
     updateUndoRedoButtons();
@@ -505,18 +583,30 @@ DB5035AudioProcessorEditor::~DB5035AudioProcessorEditor()
         cb.button.setLookAndFeel (nullptr);
     helpButton.button.setLookAndFeel (nullptr);
     oversamplingButton.button.setLookAndFeel (nullptr);
+    uiStyleButton.setLookAndFeel (nullptr);
+    vuModeButton.setLookAndFeel (nullptr);
     setLookAndFeel (nullptr);
 }
 
 void DB5035AudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (background);
+    if (uiStyle == UiStyle::classic)
+        paintClassic (g);
 }
 
 void DB5035AudioProcessorEditor::resized()
 {
-    scaledContent.setBounds (0, 0, designWidth, designHeight);
-    scaledContent.setTransform (getContentTransform (getLocalBounds()));
+    if (uiStyle == UiStyle::vintage)
+    {
+        scaledContent.setBounds (0, 0, designWidth, designHeight);
+        scaledContent.setTransform (getContentTransform (getLocalBounds()));
+    }
+    else
+    {
+        scaledContent.setBounds (0, 0, classicDesignWidth, classicDesignHeight);
+        scaledContent.setTransform (getClassicContentTransform (getLocalBounds()));
+    }
     layoutContent();
     layoutCommandStrip();
     helpOverlay.setBounds (getLocalBounds());
@@ -530,6 +620,14 @@ void DB5035AudioProcessorEditor::layoutButton (ButtonControl& control, juce::Rec
 }
 
 void DB5035AudioProcessorEditor::layoutContent()
+{
+    if (uiStyle == UiStyle::classic)
+        layoutClassicContent();
+    else
+        layoutVintageContent();
+}
+
+void DB5035AudioProcessorEditor::layoutVintageContent()
 {
     layoutButton (buttons[0], juce::Rectangle<int> (970, 5, 80, 60));
     layoutButton (buttons[1], juce::Rectangle<int> (298, 8, 80, 60));
@@ -559,6 +657,191 @@ void DB5035AudioProcessorEditor::layoutContent()
     textOverlay.toFront (false);
 }
 
+void DB5035AudioProcessorEditor::layoutClassicContent()
+{
+    auto bounds = juce::Rectangle<int> (0, 0, classicDesignWidth, classicDesignHeight).reduced (30);
+    bounds.removeFromTop (84);
+
+    const auto meterWidth = 150;
+    auto rightArea = bounds.removeFromRight (meterWidth).reduced (8, 16);
+    rightArea.removeFromTop (50);
+    auto meterArea = rightArea.removeFromTop (172);
+    auto inputArea = meterArea.removeFromTop (50);
+    auto outputArea = meterArea.removeFromTop (50);
+    auto reductionArea = meterArea.removeFromTop (50);
+
+    auto placeMeter = [] (juce::Label& label, MeterBar& meter, juce::Rectangle<int> area)
+    {
+        label.setBounds (area.removeFromTop (18));
+        meter.setBounds (area.reduced (0, 6));
+    };
+
+    placeMeter (inputMeterLabel, inputMeter, inputArea);
+    placeMeter (outputMeterLabel, outputMeter, outputArea);
+    placeMeter (gainReductionMeterLabel, gainReductionMeter, reductionArea);
+
+    bounds.removeFromRight (18);
+    auto leftInset = bounds.removeFromLeft (124);
+    layoutClassicButton (buttons[0], leftInset.withTrimmedTop (22).withHeight (72).reduced (4, 0));
+
+    auto topButtons = bounds.withHeight (62);
+    topButtons.removeFromLeft (386);
+    layoutClassicButton (buttons[1], topButtons.removeFromLeft (124).reduced (8, 0));
+    topButtons.removeFromLeft (168);
+    layoutClassicButton (buttons[2], topButtons.removeFromLeft (96).reduced (8, 0));
+
+    bounds.removeFromTop (58);
+    auto knobArea = bounds.withHeight (250);
+    const auto knobWidth = knobArea.getWidth() / 6;
+    for (auto& knob : knobs)
+        layoutClassicKnob (knob, knobArea.removeFromLeft (knobWidth).reduced (10, 0));
+}
+
+void DB5035AudioProcessorEditor::layoutClassicButton (ButtonControl& control, juce::Rectangle<int> bounds)
+{
+    control.name.setBounds (bounds.removeFromTop (26));
+    const auto diameter = juce::jmin (36, bounds.getHeight());
+    control.button.setBounds (bounds.withSizeKeepingCentre (diameter, diameter));
+}
+
+void DB5035AudioProcessorEditor::layoutClassicKnob (KnobComponent& control, juce::Rectangle<int> bounds)
+{
+    control.setBounds (bounds);
+}
+
+void DB5035AudioProcessorEditor::paintClassic (juce::Graphics& g)
+{
+    juce::Graphics::ScopedSaveState state (g);
+    g.addTransform (getClassicContentTransform (getLocalBounds()));
+
+    const auto designBounds = juce::Rectangle<int> (0, 0, classicDesignWidth, classicDesignHeight);
+    drawClassicHardwareFrame (g, designBounds.reduced (14));
+
+    auto module = designBounds.reduced (30);
+    module.removeFromTop (36);
+    auto controls = module;
+    const auto meterWidth = 150;
+    controls.removeFromRight (meterWidth + 18);
+
+    g.setColour (classicLine.withAlpha (0.95f));
+    g.fillRect (controls.getRight() + 4, controls.getY() + 16, 3, controls.getHeight() - 26);
+    g.fillRect (controls.getX() + 122, controls.getY() + 16, 3, controls.getHeight() - 26);
+
+    g.setColour (classicText);
+    g.setFont (uiFont (28.0f, juce::Font::bold));
+    g.drawText ("DB-5035", module.removeFromTop (30), juce::Justification::centredLeft);
+
+    g.setColour (classicMuted);
+    g.setFont (uiFont (12.0f, juce::Font::bold));
+    g.drawText ("DIODE BRIDGE COMPRESSOR", 36, 58, 260, 20, juce::Justification::centredLeft);
+    drawClassicSignature (g, designBounds.reduced (30));
+
+    auto knobBand = designBounds.reduced (30);
+    knobBand.removeFromTop (84);
+    knobBand.removeFromRight (meterWidth + 18);
+    knobBand.removeFromLeft (124);
+    knobBand.removeFromTop (58);
+    knobBand = knobBand.withHeight (250);
+    const auto knobWidth = knobBand.getWidth() / 6;
+
+    drawClassicKnobScale (g, knobBand.removeFromLeft (knobWidth).reduced (10, 0),
+                          { "-25", "0", "+20" }, classicRotaryStart, classicRotaryEnd, false);
+    drawClassicKnobScale (g, knobBand.removeFromLeft (knobWidth).reduced (10, 0),
+                          { "1.5", "3", "6", "8" }, classicRotaryStart, classicRotaryEnd, true);
+    drawClassicKnobScale (g, knobBand.removeFromLeft (knobWidth).reduced (10, 0),
+                          { "-6", "0", "+12", "+20" }, classicRotaryStart, classicRotaryEnd, false);
+    drawClassicKnobScale (g, knobBand.removeFromLeft (knobWidth).reduced (10, 0),
+                          { "FAST", "MED", "SLOW", "AUTO" }, classicRotaryStart, classicRotaryEnd, true);
+    drawClassicKnobScale (g, knobBand.removeFromLeft (knobWidth).reduced (10, 0),
+                          { "20", "90", "300" }, classicRotaryStart, classicRotaryEnd, false);
+    drawClassicKnobScale (g, knobBand.removeFromLeft (knobWidth).reduced (10, 0),
+                          { "0", "50", "100" }, classicRotaryStart, classicRotaryEnd, false);
+}
+
+void DB5035AudioProcessorEditor::drawClassicHardwareFrame (juce::Graphics& g, juce::Rectangle<int> bounds)
+{
+    g.setGradientFill (juce::ColourGradient (classicPanelTop, bounds.getTopLeft().toFloat(),
+                                             classicPanel, bounds.getBottomLeft().toFloat(), false));
+    g.fillRoundedRectangle (bounds.toFloat(), 4.0f);
+    g.setColour (juce::Colour (0xff565650));
+    g.drawRoundedRectangle (bounds.toFloat(), 4.0f, 1.0f);
+    g.setColour (juce::Colours::black.withAlpha (0.32f));
+    g.fillRect (bounds.removeFromBottom (16));
+}
+
+void DB5035AudioProcessorEditor::drawClassicSignature (juce::Graphics& g, juce::Rectangle<int> bounds)
+{
+    const auto meterWidth = 150;
+    auto signatureArea = bounds.removeFromRight (meterWidth).reduced (4, 0);
+    signatureArea = signatureArea.withTrimmedTop (30).withHeight (86);
+
+    juce::Graphics::ScopedSaveState state (g);
+    g.addTransform (juce::AffineTransform::rotation (-0.10f,
+                                                     (float) signatureArea.getCentreX(),
+                                                     (float) signatureArea.getCentreY()));
+    const auto signatureText = juce::String::fromUTF8 ("\xe9\x9d\x92");
+    auto inkArea = signatureArea.reduced (36, 4).translated (-4, 0);
+    g.setFont (juce::FontOptions (signatureTypefaceName(), 62.0f, juce::Font::plain));
+    g.setColour (classicPanelDark.withAlpha (0.26f));
+    g.drawFittedText (signatureText, inkArea.translated (2, 2), juce::Justification::centred, 1);
+    g.setColour (classicCream.withAlpha (0.70f));
+    g.drawFittedText (signatureText, inkArea, juce::Justification::centred, 1);
+    g.setColour (classicCream.withAlpha (0.18f));
+    g.drawFittedText (signatureText, inkArea.translated (-1, 0), juce::Justification::centred, 1);
+
+    juce::Random random (0x5135);
+    g.reduceClipRegion (inkArea.reduced (2, 8));
+    for (int i = 0; i < 24; ++i)
+    {
+        const auto size = 0.7f + random.nextFloat() * 2.1f;
+        const auto x = (float) inkArea.getX() + random.nextFloat() * ((float) inkArea.getWidth() - size);
+        const auto y = (float) inkArea.getY() + random.nextFloat() * ((float) inkArea.getHeight() - size);
+        g.setColour (classicPanel.withAlpha (0.24f + random.nextFloat() * 0.28f));
+        g.fillEllipse (x, y, size, size);
+    }
+}
+
+void DB5035AudioProcessorEditor::drawClassicKnobScale (juce::Graphics& g,
+                                                       juce::Rectangle<int> bounds,
+                                                       const juce::StringArray& labels,
+                                                       float startAngle,
+                                                       float endAngle,
+                                                       bool majorLabels)
+{
+    bounds.removeFromBottom (28);
+    bounds.removeFromBottom (24);
+    auto dialBounds = bounds.reduced (18, 12);
+    dialBounds.translate (0, -18);
+    const auto dial = dialBounds.toFloat();
+    const auto centre = dial.getCentre();
+    const auto radius = juce::jmin (dial.getWidth(), dial.getHeight()) * 0.48f;
+    const auto tickOuter = radius + 9.0f;
+    const auto tickInner = radius + 2.0f;
+
+    g.setColour (classicLine);
+    constexpr int tickCount = 17;
+    for (int i = 0; i < tickCount; ++i)
+    {
+        const auto t = (float) i / (float) (tickCount - 1);
+        const auto angle = startAngle + t * (endAngle - startAngle);
+        const auto isMajor = i % 5 == 0 || (majorLabels && labels.size() == 6 && i % 4 == 0);
+        const auto outer = pointOnCircle (dial, tickOuter, angle);
+        const auto inner = pointOnCircle (dial, isMajor ? tickInner - 4.0f : tickInner, angle);
+        g.drawLine ({ inner, outer }, isMajor ? 2.0f : 1.0f);
+    }
+
+    g.setFont (uiFont (majorLabels ? 13.0f : 12.0f, juce::Font::bold));
+    g.setColour (classicText);
+    for (int i = 0; i < labels.size(); ++i)
+    {
+        const auto t = labels.size() == 1 ? 0.5f : (float) i / (float) (labels.size() - 1);
+        const auto angle = startAngle + t * (endAngle - startAngle);
+        const auto p = juce::Point<float> { centre.x + std::cos (angle) * (radius + 24.0f),
+                                            centre.y + std::sin (angle) * (radius + 24.0f) };
+        g.drawText (labels[i], (int) p.x - 24, (int) p.y - 8, 48, 16, juce::Justification::centred);
+    }
+}
+
 void DB5035AudioProcessorEditor::TextOverlay::paint (juce::Graphics& g)
 {
     const int titleX = 26;
@@ -567,19 +850,19 @@ void DB5035AudioProcessorEditor::TextOverlay::paint (juce::Graphics& g)
 
     const auto titleFont = sourceSansFont (25.37f);
     const auto subFont = sourceSansLightItalicFont (12.7f);
-    const auto titleW = titleFont.getStringWidth ("DB-5035");
-    const auto subW = subFont.getStringWidth ("D I O D E  B R I D G E");
+    const auto titleW = juce::GlyphArrangement::getStringWidth (titleFont, "DB-5035");
+    const auto subW = juce::GlyphArrangement::getStringWidth (subFont, "D I O D E  B R I D G E");
     const auto maxW = (float) juce::jmax (titleW, subW);
     const auto cx = (float) titleX + maxW / 2.0f;
 
     g.setColour (text);
     g.setFont (titleFont);
-    g.drawText ("DB-5035", juce::roundToInt (cx - titleW / 2.0f), titleY, titleW + 2, titleLineH, juce::Justification::centredLeft);
+    g.drawText ("DB-5035", juce::roundToInt (cx - titleW / 2.0f), titleY, juce::roundToInt (titleW) + 2, titleLineH, juce::Justification::centredLeft);
 
     g.setColour (muted);
     g.setFont (subFont);
     g.drawFittedText ("D I O D E  B R I D G E\nC O M P R E S S O R",
-                       juce::roundToInt (cx - subW / 2.0f), titleY + titleLineH, subW + 2, titleLineH,
+                       juce::roundToInt (cx - subW / 2.0f), titleY + titleLineH, juce::roundToInt (subW) + 2, titleLineH,
                        juce::Justification::centredLeft, 2);
 
     DB5035AudioProcessorEditor::drawSignature (g);
@@ -601,12 +884,127 @@ void DB5035AudioProcessorEditor::layoutCommandStrip()
     compareButtons[2].button.setBounds (r); r.setX (r.getRight() + gap);
     helpButton.button.setBounds (r); r.setX (r.getRight() + gap);
     oversamplingButton.button.setBounds (r);
+    uiStyleButton.setBounds (getWidth() - 118, startY, 115, cmdBtnH);
+}
+
+void DB5035AudioProcessorEditor::applyUiStyle (UiStyle style, bool resizeEditor)
+{
+   #if ! DB5035_ENABLE_VINTAGE_UI
+    style = UiStyle::classic;
+   #endif
+
+    uiStyle = style;
+    const auto vintage = uiStyle == UiStyle::vintage;
+    audioProcessor.setUiStyle ((int) uiStyle);
+    panelConstrainer.setVintage (vintage);
+    setLookAndFeel (vintage ? static_cast<juce::LookAndFeel*> (&hardwareLookAndFeel)
+                            : static_cast<juce::LookAndFeel*> (&classicLookAndFeel));
+
+    panelOverlay.setVisible (vintage);
+    textOverlay.setVisible (vintage);
+    vuMeter.setVisible (vintage);
+    vuModeButton.setVisible (vintage);
+    inputMeter.setVisible (! vintage);
+    outputMeter.setVisible (! vintage);
+    gainReductionMeter.setVisible (! vintage);
+    inputMeterLabel.setVisible (! vintage);
+    outputMeterLabel.setVisible (! vintage);
+    gainReductionMeterLabel.setVisible (! vintage);
+
+    const std::array<juce::Colour, 6> vintageKnobColours
+        { blackKnob, blackKnob, redKnob, creamKnob, blackKnob, creamKnob };
+    const std::array<juce::Colour, 6> classicKnobColours
+        { classicBlackKnob, classicBlackKnob, classicRedKnob, classicCream, classicCream, classicCream };
+
+    for (size_t i = 0; i < knobs.size(); ++i)
+    {
+        auto& knob = knobs[i];
+        knob.vintageLayout = vintage;
+        knob.labelYOffset = vintage && (i == 1 || i == 3) ? -13 : 0;
+        knob.slider.editable = ! vintage || (i != 1 && i != 3);
+        const auto knobColour = vintage ? vintageKnobColours[i] : classicKnobColours[i];
+        knob.knobColour = knobColour;
+        knob.slider.setColour (juce::Slider::thumbColourId, knobColour);
+        knob.slider.setColour (juce::Slider::rotarySliderFillColourId, vintage ? amber : classicAmber);
+        knob.slider.setColour (juce::Slider::rotarySliderOutlineColourId, vintage ? line : classicLine);
+        knob.nameLabel.setColour (juce::Label::textColourId, vintage ? muted : classicMuted);
+        knob.nameLabel.setFont (vintage ? sourceSansFont (11.3f)
+                                       : juce::Font (uiFont (13.0f, juce::Font::bold)));
+        knob.valueLabel.setColour (juce::Label::textColourId, vintage ? text : classicText);
+        knob.valueLabel.setColour (juce::Label::outlineWhenEditingColourId, vintage ? amber : classicAmber);
+        knob.valueLabel.setFont (juce::Font (uiFont (12.0f, vintage ? juce::Font::plain : juce::Font::bold)));
+        knob.valueLabel.setVisible (! vintage);
+
+        if (vintage)
+        {
+            const auto pi = juce::MathConstants<float>::pi;
+            const auto start = (i == 1 || i == 3) ? pi : rotaryStart;
+            const auto end = (i == 1 || i == 3) ? pi * 2.0f : rotaryEnd;
+            knob.slider.setRotaryParameters (start, end, true);
+            knob.scaleStartAngle = start;
+            knob.scaleEndAngle = end;
+        }
+        else
+        {
+            knob.slider.setRotaryParameters (classicRotaryStart, classicRotaryEnd, true);
+        }
+
+        knob.resized();
+        knob.repaint();
+    }
+
+    buttons[1].name.setText (vintage ? "S/C INSERT" : "EXT S/C", juce::dontSendNotification);
+    for (size_t i = 0; i < buttons.size(); ++i)
+    {
+        auto& button = buttons[i];
+        button.name.setColour (juce::Label::textColourId, vintage ? muted : classicMuted);
+        button.name.setFont (vintage ? sourceSansFont (11.3f)
+                                     : juce::Font (uiFont (13.0f, juce::Font::bold)));
+        button.button.setColour (juce::TextButton::buttonColourId,
+                                 vintage ? juce::Colour (0xffeaeef4) : juce::Colour (0xff252622));
+        button.button.setColour (juce::TextButton::buttonOnColourId,
+                                 vintage ? (i == 2 ? amber : green) : classicCream);
+    }
+
+    for (auto* label : { &inputMeterLabel, &outputMeterLabel, &gainReductionMeterLabel })
+    {
+        label->setColour (juce::Label::textColourId, classicMuted);
+        label->setFont (juce::Font (uiFont (13.0f, juce::Font::bold)));
+    }
+
+    historyButtons[0].button.setButtonText (vintage ? juce::String::charToString ((juce_wchar) 0x21b6) : "<");
+    historyButtons[1].button.setButtonText (vintage ? juce::String::charToString ((juce_wchar) 0x21b7) : ">");
+    compareButtons[2].button.setButtonText (vintage ? "A>B" : ">");
+    helpButton.button.setButtonText (vintage ? "HELP" : "?");
+    updateUiStyleButton();
+
+    if (resizeEditor)
+        setSize (vintage ? designWidth : classicDesignWidth,
+                 vintage ? designHeight + commandStripHeight : classicDesignHeight);
+    else
+        resized();
+
+    repaint();
+}
+
+void DB5035AudioProcessorEditor::updateUiStyleButton()
+{
+   #if DB5035_ENABLE_VINTAGE_UI
+    uiStyleButton.setVisible (true);
+    uiStyleButton.setButtonText (uiStyle == UiStyle::classic ? "UI: CLASSIC" : "UI: VINTAGE");
+   #else
+    uiStyleButton.setVisible (false);
+   #endif
 }
 
 void DB5035AudioProcessorEditor::timerCallback()
 {
     const auto meters = audioProcessor.getMeters();
     gainReductionPeakHoldDb = juce::jmax (gainReductionPeakHoldDb, meters.gainReductionDb);
+    inputMeter.setValue (meters.inputDb, -60.0f, 6.0f, false);
+    gainReductionMeter.setPeakHold (gainReductionPeakHoldDb);
+    gainReductionMeter.setValue (meters.gainReductionDb, 0.0f, 24.0f, true);
+    outputMeter.setValue (meters.outputDb, -60.0f, 6.0f, false);
 
     switch (vuMeter.getMode())
     {
@@ -621,6 +1019,10 @@ void DB5035AudioProcessorEditor::timerCallback()
             vuMeter.setValue (meters.gainReductionDb, 0.0f, 24.0f);
             break;
     }
+    const auto storedStyle = audioProcessor.getUiStyle() == (int) UiStyle::vintage ? UiStyle::vintage : UiStyle::classic;
+    if (storedStyle != uiStyle)
+        applyUiStyle (storedStyle, true);
+
     updateValueLabels();
     updateUndoRedoButtons();
     updateCompareButtons();
@@ -649,13 +1051,14 @@ void DB5035AudioProcessorEditor::configureKnob (KnobComponent& control,
     control.valueLabel.setColour (juce::Label::outlineWhenEditingColourId, amber);
     control.valueLabel.onEditorHide = [&control]
     {
-        control.valueLabel.setVisible (false);
+        if (control.vintageLayout)
+            control.valueLabel.setVisible (false);
     };
 
     control.slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
     control.slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
     control.slider.setRotaryParameters (startAngle, endAngle, true);
-    control.slider.setMouseDragSensitivity (280);
+    control.slider.setMouseDragSensitivity (520);
     control.slider.setVelocityModeParameters (0.32, 1, 0.0, true, juce::ModifierKeys::shiftModifier);
     control.slider.setColour (juce::Slider::thumbColourId, knobColour);
     control.slider.setColour (juce::Slider::rotarySliderFillColourId, amber);
@@ -710,7 +1113,7 @@ void DB5035AudioProcessorEditor::configureCommandButton (CommandButtonControl& c
 
 void DB5035AudioProcessorEditor::KnobComponent::paint (juce::Graphics& g)
 {
-    if (scaleLabels.isEmpty())
+    if (! vintageLayout || scaleLabels.isEmpty())
         return;
 
     const auto dial = slider.getBounds().toFloat();
@@ -757,7 +1160,6 @@ void DB5035AudioProcessorEditor::KnobComponent::paint (juce::Graphics& g)
     {
         const auto t = scaleLabels.size() == 1 ? 0.5f : (float) i / (float) (scaleLabels.size() - 1);
         const auto angle = scaleStartAngle + t * (scaleEndAngle - scaleStartAngle);
-        const auto labelR = radius + 18.0f;
         const auto ox = scaleLabels[i] == "SLOW" ? 6.0f : scaleLabels[i] == "AUTO" ? 6.0f : 0.0f;
         const auto p = juce::Point<float> { centre.x + std::cos (angle) * (radius + 18.0f) + ox,
                                              centre.y + std::sin (angle) * (radius + 18.0f) };
@@ -768,15 +1170,24 @@ void DB5035AudioProcessorEditor::KnobComponent::paint (juce::Graphics& g)
 void DB5035AudioProcessorEditor::KnobComponent::resized()
 {
     auto bounds = getLocalBounds();
-    auto sliderBounds = bounds.reduced (38, 30);
-    sliderBounds.translate (0, -16);
-    slider.setBounds (sliderBounds);
-
-    const auto sliderBottom = slider.getBounds().getBottom();
-    nameLabel.setBounds (0, sliderBottom + 16 + labelYOffset, getWidth(), 20);
-
-    const auto sliderCentre = slider.getBounds().getCentre();
-    valueLabel.setBounds (sliderCentre.x - 30, sliderCentre.y - 10, 60, 20);
+    if (vintageLayout)
+    {
+        auto sliderBounds = bounds.reduced (38, 30);
+        sliderBounds.translate (0, -16);
+        slider.setBounds (sliderBounds);
+        const auto sliderBottom = slider.getBounds().getBottom();
+        nameLabel.setBounds (0, sliderBottom + 16 + labelYOffset, getWidth(), 20);
+        const auto sliderCentre = slider.getBounds().getCentre();
+        valueLabel.setBounds (sliderCentre.x - 30, sliderCentre.y - 10, 60, 20);
+    }
+    else
+    {
+        nameLabel.setBounds (bounds.removeFromBottom (28));
+        valueLabel.setBounds (bounds.removeFromBottom (24));
+        auto sliderBounds = bounds.reduced (18, 12);
+        sliderBounds.translate (0, -18);
+        slider.setBounds (sliderBounds);
+    }
 }
 
 void DB5035AudioProcessorEditor::drawSignature (juce::Graphics& g)
@@ -933,6 +1344,124 @@ void DB5035AudioProcessorEditor::ParameterSlider::mouseDoubleClick (const juce::
         if (auto* editor = valueLabel->getCurrentTextEditor())
             editor->setJustification (juce::Justification::centred);
     }
+}
+
+void DB5035AudioProcessorEditor::ClassicLookAndFeel::drawRotarySlider (juce::Graphics& g,
+                                                                       int x,
+                                                                       int y,
+                                                                       int width,
+                                                                       int height,
+                                                                       float sliderPos,
+                                                                       float rotaryStartAngle,
+                                                                       float rotaryEndAngle,
+                                                                       juce::Slider& slider)
+{
+    auto bounds = juce::Rectangle<float> ((float) x, (float) y, (float) width, (float) height).reduced (4.0f);
+    const auto size = juce::jmin (bounds.getWidth(), bounds.getHeight());
+    bounds = bounds.withSizeKeepingCentre (size, size);
+    const auto knobColour = slider.findColour (juce::Slider::thumbColourId);
+    const auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+    const auto radius = size * 0.5f;
+
+    g.setColour (juce::Colours::black.withAlpha (0.35f));
+    g.fillEllipse (bounds.translated (3.0f, 4.0f));
+    g.setGradientFill (juce::ColourGradient (knobColour.brighter (0.28f), bounds.getTopLeft(),
+                                             knobColour.darker (0.55f), bounds.getBottomRight(), false));
+    g.fillEllipse (bounds);
+    g.setColour (juce::Colours::black.withAlpha (0.85f));
+    g.drawEllipse (bounds, 2.0f);
+    g.setColour (knobColour.brighter (0.12f));
+    g.drawEllipse (bounds.reduced (radius * 0.22f), 1.0f);
+
+    const auto pointerStart = pointOnCircle (bounds, radius * 0.26f, angle);
+    const auto pointerEnd = pointOnCircle (bounds, radius * 0.82f, angle);
+    g.setColour (knobColour == classicCream ? juce::Colour (0xff292929) : classicCream);
+    g.drawLine ({ pointerStart, pointerEnd }, 5.0f);
+}
+
+void DB5035AudioProcessorEditor::ClassicLookAndFeel::drawButtonBackground (juce::Graphics& g,
+                                                                          juce::Button& button,
+                                                                          const juce::Colour&,
+                                                                          bool shouldDrawButtonAsHighlighted,
+                                                                          bool shouldDrawButtonAsDown)
+{
+    auto bounds = button.getLocalBounds().toFloat().reduced (2.0f);
+    const auto on = button.getToggleState();
+    const auto base = on ? classicCream : juce::Colour (0xff1c1d1b);
+    g.setColour (juce::Colours::black.withAlpha (0.42f));
+    g.fillEllipse (bounds.translated (2.0f, 3.0f));
+    g.setGradientFill (juce::ColourGradient (base.brighter (on ? 0.08f : 0.18f), bounds.getTopLeft(),
+                                             base.darker (on ? 0.15f : 0.38f), bounds.getBottomRight(), false));
+    g.fillEllipse (bounds);
+    g.setColour (shouldDrawButtonAsDown || shouldDrawButtonAsHighlighted ? classicAmber : juce::Colour (0xff0c0c0a));
+    g.drawEllipse (bounds, 1.5f);
+}
+
+void DB5035AudioProcessorEditor::ClassicLookAndFeel::drawButtonText (juce::Graphics& g,
+                                                                     juce::TextButton& button,
+                                                                     bool,
+                                                                     bool)
+{
+    if (button.getButtonText().isEmpty())
+        return;
+    g.setColour (button.isEnabled() ? classicCream : classicMuted.withAlpha (0.45f));
+    g.setFont (uiFont (16.0f, juce::Font::bold));
+    g.drawText (button.getButtonText(), button.getLocalBounds(), juce::Justification::centred);
+}
+
+void DB5035AudioProcessorEditor::MeterBar::setValue (float newValueDb, float newMinimumDb,
+                                                     float newMaximumDb, bool isReductionMeter)
+{
+    valueDb = newValueDb;
+    minimumDb = newMinimumDb;
+    maximumDb = newMaximumDb;
+    reduction = isReductionMeter;
+    repaint();
+}
+
+void DB5035AudioProcessorEditor::MeterBar::setPeakHold (float newPeakDb)
+{
+    heldPeakDb = newPeakDb;
+    showPeakHold = true;
+    repaint();
+}
+
+void DB5035AudioProcessorEditor::MeterBar::mouseDown (const juce::MouseEvent& event)
+{
+    if (reduction && event.mods.isLeftButtonDown() && onResetPeak)
+        onResetPeak();
+}
+
+void DB5035AudioProcessorEditor::MeterBar::paint (juce::Graphics& g)
+{
+    const auto bounds = getLocalBounds().toFloat();
+    g.setColour (classicPanelDark);
+    g.fillRoundedRectangle (bounds, 4.0f);
+    g.setColour (classicLine.withAlpha (0.45f));
+    g.drawRoundedRectangle (bounds, 4.0f, 1.0f);
+
+    const auto meterBounds = bounds.reduced (3.0f);
+    const auto normalised = juce::jlimit (0.0f, 1.0f, (valueDb - minimumDb) / (maximumDb - minimumDb));
+    auto fill = meterBounds;
+    fill.setWidth (meterBounds.getWidth() * normalised);
+    if (reduction)
+        fill.setX (meterBounds.getRight() - fill.getWidth());
+    g.setColour (reduction ? classicRed : classicGreen);
+    g.fillRoundedRectangle (fill, 3.0f);
+
+    if (reduction && showPeakHold)
+    {
+        const auto peakNormalised = juce::jlimit (0.0f, 1.0f, (heldPeakDb - minimumDb) / (maximumDb - minimumDb));
+        const auto peakX = meterBounds.getRight() - meterBounds.getWidth() * peakNormalised;
+        g.setColour (classicCream.withAlpha (0.88f));
+        g.drawLine (peakX, meterBounds.getY(), peakX, meterBounds.getBottom(), 1.6f);
+    }
+
+    g.setColour (classicText);
+    g.setFont (uiFont (11.0f, juce::Font::bold));
+    const auto label = reduction ? juce::String (std::abs (valueDb), 1) + " | " + juce::String (std::abs (heldPeakDb), 1) + " dB"
+                                 : juce::String (valueDb, 1) + " dBFS";
+    g.drawText (label, getLocalBounds().reduced (8, 0), juce::Justification::centredRight);
 }
 
 void DB5035AudioProcessorEditor::HardwareLookAndFeel::drawRotarySlider (juce::Graphics& g,

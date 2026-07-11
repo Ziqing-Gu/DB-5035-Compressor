@@ -44,6 +44,8 @@ public:
     int getActiveCompareSlot() const { return activeCompareSlot; }
     int getVuMode() const { return vuMode; }
     void setVuMode (int mode) { vuMode = mode; }
+    int getUiStyle() const { return uiStyle; }
+    void setUiStyle (int style) { uiStyle = juce::jlimit (0, 1, style); }
 
     static APVTS::ParameterLayout createParameterLayout();
 
@@ -82,6 +84,7 @@ private:
     std::atomic<float> outputMeterDb { -80.0f };
     std::atomic<float> gainReductionDb { 0.0f };
     int vuMode = 0;
+    int uiStyle = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DB5035AudioProcessor)
 };
