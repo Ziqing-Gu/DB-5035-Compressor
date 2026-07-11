@@ -42,6 +42,8 @@ public:
     void selectCompareSlot (int slotIndex);
     void copyCompareAToB();
     int getActiveCompareSlot() const { return activeCompareSlot; }
+    int getVuMode() const { return vuMode; }
+    void setVuMode (int mode) { vuMode = mode; }
 
     static APVTS::ParameterLayout createParameterLayout();
 
@@ -79,6 +81,7 @@ private:
     std::atomic<float> inputMeterDb { -80.0f };
     std::atomic<float> outputMeterDb { -80.0f };
     std::atomic<float> gainReductionDb { 0.0f };
+    int vuMode = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DB5035AudioProcessor)
 };
