@@ -20,6 +20,18 @@ namespace
 {
     constexpr auto compareStateTag = "CompareSlots";
     constexpr auto compareStateActive = "active";
+    constexpr auto uiStylePreferenceKey = "uiStyle";
+
+    std::unique_ptr<juce::PropertiesFile> createUiPreferences()
+    {
+        juce::PropertiesFile::Options options;
+        options.applicationName = "DB-5035 Qing Compressor";
+        options.filenameSuffix = "settings";
+        options.folderName = "Codex Audio";
+        options.osxLibrarySubFolder = "Application Support";
+        options.millisecondsBeforeSaving = 0;
+        return std::make_unique<juce::PropertiesFile> (options);
+    }
 
     constexpr std::array<const char*, 10> compareParameterIds
     {{
@@ -88,6 +100,16 @@ DB5035AudioProcessor::DB5035AudioProcessor()
         .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
       parameters (*this, &undoManager, "Parameters", createParameterLayout())
 {
+    uiPreferences = createUiPreferences();
+    uiStyle = juce::jlimit (0, 1, uiPreferences->getIntValue (uiStylePreferenceKey, uiStyle));
+}
+
+void DB5035AudioProcessor::setUiStyle (int style)
+{
+    uiStyle = juce::jlimit (0, 1, style);
+
+    if (uiPreferences != nullptr)
+        uiPreferences->setValue (uiStylePreferenceKey, uiStyle);
 }
 
 void DB5035AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
@@ -268,9 +290,6 @@ void DB5035AudioProcessor::setStateInformation (const void* data, int sizeInByte
 
             if (stateTree.hasProperty ("vuMode"))
                 vuMode = (int) stateTree.getProperty ("vuMode");
-
-            if (stateTree.hasProperty ("uiStyle"))
-                uiStyle = juce::jlimit (0, 1, (int) stateTree.getProperty ("uiStyle"));
         }
 }
 

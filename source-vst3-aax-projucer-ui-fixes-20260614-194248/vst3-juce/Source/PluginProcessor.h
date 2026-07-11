@@ -45,7 +45,7 @@ public:
     int getVuMode() const { return vuMode; }
     void setVuMode (int mode) { vuMode = mode; }
     int getUiStyle() const { return uiStyle; }
-    void setUiStyle (int style) { uiStyle = juce::jlimit (0, 1, style); }
+    void setUiStyle (int style);
 
     static APVTS::ParameterLayout createParameterLayout();
 
@@ -67,6 +67,7 @@ private:
 
     juce::UndoManager undoManager;
     APVTS parameters;
+    std::unique_ptr<juce::PropertiesFile> uiPreferences;
     DiodeBridgeCompressor compressor;
     CompareSnapshot compareSlotA {};
     CompareSnapshot compareSlotB {};

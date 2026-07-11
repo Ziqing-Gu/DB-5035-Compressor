@@ -444,12 +444,8 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
     compareButtons[1].button.onClick = [this] { audioProcessor.selectCompareSlot (1); updateCompareButtons(); updateValueLabels(); };
     compareButtons[2].button.onClick = [this] { audioProcessor.copyCompareAToB(); updateCompareButtons(); updateValueLabels(); };
     helpButton.button.setButtonText ("HELP");
-    helpButton.button.onClick = [this]
-    {
-        helpOverlay.setVisible (true);
-        helpOverlay.toFront (true);
-    };
-    helpOverlay.onClose = [this] { helpOverlay.setVisible (false); };
+    helpButton.button.onClick = [this] { showHelpOverlay(); };
+    helpOverlay.onClose = [this] { closeHelpOverlay(); };
     oversamplingButton.button.setButtonText ("1x");
     oversamplingButton.button.onClick = [this]
     {
@@ -985,6 +981,26 @@ void DB5035AudioProcessorEditor::applyUiStyle (UiStyle style, bool resizeEditor)
         resized();
 
     repaint();
+}
+
+void DB5035AudioProcessorEditor::showHelpOverlay()
+{
+    panelConstrainer.setHelpExpanded (true);
+    const auto width = juce::jmax (panelConstrainer.getMinimumWidth(), getWidth());
+    setSize (width, panelConstrainer.getHeightForWidth (width));
+    helpOverlay.setVisible (true);
+    helpOverlay.toFront (true);
+}
+
+void DB5035AudioProcessorEditor::closeHelpOverlay()
+{
+    helpOverlay.setVisible (false);
+    panelConstrainer.setHelpExpanded (false);
+
+    const auto width = juce::jlimit (panelConstrainer.getMinimumWidth(),
+                                     panelConstrainer.getMaximumWidth(),
+                                     getWidth());
+    setSize (width, panelConstrainer.getHeightForWidth (width));
 }
 
 void DB5035AudioProcessorEditor::updateUiStyleButton()

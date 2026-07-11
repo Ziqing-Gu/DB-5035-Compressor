@@ -10,21 +10,49 @@ class PanelConstrainer : public juce::ComponentBoundsConstrainer
 {
 public:
     void setVintage (bool shouldUseVintage) { vintage = shouldUseVintage; }
+    void setHelpExpanded (bool shouldExpand) { helpExpanded = shouldExpand; }
+
+    int getMinimumWidth() const { return helpExpanded ? 900 : 400; }
+    int getMaximumWidth() const
+    {
+        return juce::jmin (1920, juce::roundToInt (1200.0f * getBaseWidth() / getBaseHeight()));
+    }
+
+    int getHeightForWidth (int width) const
+    {
+        width = juce::jlimit (getMinimumWidth(), getMaximumWidth(), width);
+        return juce::roundToInt (width * getBaseHeight() / getBaseWidth());
+    }
 
     void checkBounds (juce::Rectangle<int>& bounds,
-                      const juce::Rectangle<int>&,
+                      const juce::Rectangle<int>& previousBounds,
                       const juce::Rectangle<int>& limits,
-                      bool, bool, bool, bool) override
+                      bool isStretchingTop,
+                      bool isStretchingLeft,
+                      bool,
+                      bool) override
     {
-        bounds = bounds.constrainedWithin (limits);
-        const auto scale = (float) bounds.getWidth() / (vintage ? 1200.0f : 1120.0f);
-        const auto h = vintage ? 28 + juce::roundToInt (199.0f * scale)
-                               : juce::roundToInt (450.0f * scale);
-        bounds = bounds.withHeight (h);
+        juce::ignoreUnused (limits);
+
+        const auto width = juce::jlimit (getMinimumWidth(), getMaximumWidth(), bounds.getWidth());
+        bounds.setSize (width, getHeightForWidth (width));
+
+        if (isStretchingLeft)
+            bounds.setRight (previousBounds.getRight());
+
+        if (isStretchingTop)
+            bounds.setBottom (previousBounds.getBottom());
     }
 
 private:
+    float getBaseWidth() const { return helpExpanded ? 1200.0f : (vintage ? 1200.0f : 1120.0f); }
+    float getBaseHeight() const
+    {
+        return helpExpanded ? 780.0f : (vintage ? 227.0f : 450.0f);
+    }
+
     bool vintage = false;
+    bool helpExpanded = false;
 };
 
 class DB5035AudioProcessorEditor final : public juce::AudioProcessorEditor,
@@ -263,6 +291,8 @@ private:
     void layoutClassicKnob (KnobComponent& control, juce::Rectangle<int> bounds);
     void layoutClassicCommandButton (CommandButtonControl& control, juce::Rectangle<int> bounds);
     void applyUiStyle (UiStyle style, bool resizeEditor);
+    void showHelpOverlay();
+    void closeHelpOverlay();
     void updateUiStyleButton();
     void paintClassic (juce::Graphics& g);
     void drawClassicHardwareFrame (juce::Graphics& g, juce::Rectangle<int> bounds);
