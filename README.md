@@ -1,5 +1,19 @@
 #DB-5035-Qing-Compressor
 
+## 1.05 更新 / What's new in 1.05
+
+### 中文
+
+- **Vintage VU 表模式记忆：** `IN`、`OUT` 与 `REDUCTION` 的最后一次选择会作为本机偏好保存；新建实例、重开编辑器或重启宿主后，都会默认恢复该选择。
+- **状态恢复更可靠：** VU 表显示会在插件状态可用后自动同步。与 UI 模式相同，用户最后一次选择优先于旧 DAW 工程中残留的显示状态。
+- **原生 macOS 1.05 包：** GitHub Actions 工作流继续分别构建并校验 Apple Silicon（arm64）和 Intel（x86_64）VST3，产物名称已同步为 1.05。
+
+### English
+
+- **Vintage VU mode memory:** The last selected `IN`, `OUT`, or `REDUCTION` view is saved as a local preference and restored for new instances, editor reopenings, and host restarts.
+- **Reliable state restoration:** The editor synchronizes the meter mode once plugin state is available. Like the UI-style preference, the user's latest choice takes precedence over stale display state stored by an older DAW project.
+- **Native macOS 1.05 packages:** GitHub Actions continues to build and validate separate Apple Silicon (arm64) and Intel (x86_64) VST3 packages; the artifact names now match version 1.05.
+
 ## 1.04 更新 / What's new in 1.04
 
 ### 中文
