@@ -27,6 +27,9 @@
 - **缩放稳定性：** 修正 Vintage 顶部固定工具条与可缩放面板之间的尺寸计算，避免在不同窗口大小下被裁切，或出现大面积无效黑边。
 - **保留 1.02 的兼容性措施：** Help 阅读布局、原有旋钮拖动手感和可选 Classic-only 构建方式均继续保留。
 
+<img width="400" height="226" alt="1 03VU Meter表现 00_00_10--00_00_26" src="https://github.com/user-attachments/assets/cbb0a99d-abc6-451d-96ab-36e886081501" />
+
+
 ### English
 
 **1.04 includes the 1.03 and 1.04 refinements. Compared with 1.02, it adds:**
