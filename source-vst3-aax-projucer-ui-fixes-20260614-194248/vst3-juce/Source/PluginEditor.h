@@ -21,6 +21,17 @@ public:
     int getHeightForWidth (int width) const
     {
         width = juce::jlimit (getMinimumWidth(), getMaximumWidth(), width);
+
+        if (helpExpanded)
+            return juce::roundToInt (width * 780.0f / 1200.0f);
+
+        // The Vintage command strip keeps a fixed pixel height while only the
+        // hardware panel below it is scaled.  Treating the entire editor as a
+        // uniformly scaled 1200x227 surface clipped the panel at small sizes
+        // and left unused space at larger sizes.
+        if (vintage)
+            return juce::jmax (100, 28 + juce::roundToInt (width * 199.0f / 1200.0f));
+
         return juce::roundToInt (width * getBaseHeight() / getBaseWidth());
     }
 
@@ -187,12 +198,15 @@ private:
         Mode mode = Mode::output;
         float smoothedAngle = 0.0f;
         float targetAngle = 0.0f;
+        double lastNeedleUpdateMs = 0.0;
+        bool hasNeedlePosition = false;
     };
 
     class ParameterSlider final : public juce::Slider
     {
     public:
         void setValueLabel (juce::Label* labelToUse);
+        void setNameLabel (juce::Label* labelToUse);
 
         void mouseDown (const juce::MouseEvent& event) override;
         void mouseDrag (const juce::MouseEvent& event) override;
@@ -201,9 +215,14 @@ private:
 
         bool editable = true;
         bool showValueWhileDragging = false;
+        std::function<juce::String()> valueTextFormatter;
 
     private:
         juce::Label* valueLabel = nullptr;
+        juce::Label* nameLabel = nullptr;
+        void showTransientValue();
+        juce::String getDisplayText() const;
+
     };
 
     class KnobComponent final : public juce::Component

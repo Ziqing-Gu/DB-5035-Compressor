@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(DB5035Compressor VERSION 1.02)
+project(DB5035Compressor VERSION 1.04)
 
 option(DB5035_FETCH_JUCE "Download JUCE with CMake FetchContent" ON)
 option(DB5035_ENABLE_VINTAGE_UI "Build the optional hardware-inspired UI and its resources" ON)
