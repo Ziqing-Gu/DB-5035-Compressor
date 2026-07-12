@@ -6,6 +6,55 @@
 #include <memory>
 #include "PluginProcessor.h"
 
+class PanelConstrainer : public juce::ComponentBoundsConstrainer
+{
+public:
+    void setVintage (bool shouldUseVintage) { vintage = shouldUseVintage; }
+    void setHelpExpanded (bool shouldExpand) { helpExpanded = shouldExpand; }
+
+    int getMinimumWidth() const { return helpExpanded ? 900 : 400; }
+    int getMaximumWidth() const
+    {
+        return juce::jmin (1920, juce::roundToInt (1200.0f * getBaseWidth() / getBaseHeight()));
+    }
+
+    int getHeightForWidth (int width) const
+    {
+        width = juce::jlimit (getMinimumWidth(), getMaximumWidth(), width);
+        return juce::roundToInt (width * getBaseHeight() / getBaseWidth());
+    }
+
+    void checkBounds (juce::Rectangle<int>& bounds,
+                      const juce::Rectangle<int>& previousBounds,
+                      const juce::Rectangle<int>& limits,
+                      bool isStretchingTop,
+                      bool isStretchingLeft,
+                      bool,
+                      bool) override
+    {
+        juce::ignoreUnused (limits);
+
+        const auto width = juce::jlimit (getMinimumWidth(), getMaximumWidth(), bounds.getWidth());
+        bounds.setSize (width, getHeightForWidth (width));
+
+        if (isStretchingLeft)
+            bounds.setRight (previousBounds.getRight());
+
+        if (isStretchingTop)
+            bounds.setBottom (previousBounds.getBottom());
+    }
+
+private:
+    float getBaseWidth() const { return helpExpanded ? 1200.0f : (vintage ? 1200.0f : 1120.0f); }
+    float getBaseHeight() const
+    {
+        return helpExpanded ? 780.0f : (vintage ? 227.0f : 450.0f);
+    }
+
+    bool vintage = false;
+    bool helpExpanded = false;
+};
+
 class DB5035AudioProcessorEditor final : public juce::AudioProcessorEditor,
                                         private juce::Timer
 {
@@ -17,6 +66,8 @@ public:
     void resized() override;
 
 private:
+    enum class UiStyle { classic = 0, vintage = 1 };
+
     class HardwareLookAndFeel final : public juce::LookAndFeel_V4
     {
     public:
@@ -30,6 +81,52 @@ private:
                                float rotaryEndAngle,
                                juce::Slider& slider) override;
 
+        void drawButtonBackground (juce::Graphics& g,
+                                   juce::Button& button,
+                                   const juce::Colour& backgroundColour,
+                                   bool shouldDrawButtonAsHighlighted,
+                                   bool shouldDrawButtonAsDown) override;
+
+        void drawButtonText (juce::Graphics&, juce::TextButton&, bool, bool) override;
+    };
+
+    class FlatCommandLookAndFeel final : public juce::LookAndFeel_V4
+    {
+    public:
+        void drawButtonBackground (juce::Graphics& g,
+                                   juce::Button& button,
+                                   const juce::Colour& backgroundColour,
+                                   bool shouldDrawButtonAsHighlighted,
+                                   bool shouldDrawButtonAsDown) override;
+
+        void drawButtonText (juce::Graphics&, juce::TextButton&, bool, bool) override;
+    };
+
+    class ClassicLookAndFeel final : public juce::LookAndFeel_V4
+    {
+    public:
+        void drawRotarySlider (juce::Graphics& g,
+                               int x,
+                               int y,
+                               int width,
+                               int height,
+                               float sliderPos,
+                               float rotaryStartAngle,
+                               float rotaryEndAngle,
+                               juce::Slider& slider) override;
+
+        void drawButtonBackground (juce::Graphics& g,
+                                   juce::Button& button,
+                                   const juce::Colour& backgroundColour,
+                                   bool shouldDrawButtonAsHighlighted,
+                                   bool shouldDrawButtonAsDown) override;
+
+        void drawButtonText (juce::Graphics&, juce::TextButton&, bool, bool) override;
+    };
+
+    class ScrewLookAndFeel final : public juce::LookAndFeel_V4
+    {
+    public:
         void drawButtonBackground (juce::Graphics& g,
                                    juce::Button& button,
                                    const juce::Colour& backgroundColour,
@@ -58,6 +155,40 @@ private:
         bool reduction = false;
     };
 
+    class VUMeter final : public juce::Component
+    {
+    public:
+        enum class Mode { input, output, reduction };
+        void setMode (Mode newMode);
+        Mode getMode() const { return mode; }
+        void setValue (float newValueDb, float newMinimumDb, float newMaximumDb);
+        void setPeakHold (float newPeakDb);
+        void paint (juce::Graphics& g) override;
+        void mouseDown (const juce::MouseEvent& event) override;
+
+        std::function<void()> onResetPeak;
+
+    private:
+        static float dbToNormalised (float dB)
+        {
+            constexpr auto meterMin = -24.0f;
+            constexpr auto meterMax = 3.0f;
+            const auto levelMin = std::pow (10.0f, meterMin / 20.0f);
+            const auto levelMax = std::pow (10.0f, meterMax / 20.0f);
+            const auto level = std::pow (10.0f, juce::jlimit (meterMin, meterMax, dB) / 20.0f);
+            return (level - levelMin) / (levelMax - levelMin);
+        }
+
+        float valueDb = -80.0f;
+        float minimumDb = -80.0f;
+        float maximumDb = 6.0f;
+        float heldPeakDb = 0.0f;
+        bool showPeakHold = false;
+        Mode mode = Mode::output;
+        float smoothedAngle = 0.0f;
+        float targetAngle = 0.0f;
+    };
+
     class ParameterSlider final : public juce::Slider
     {
     public:
@@ -66,18 +197,39 @@ private:
         void mouseDown (const juce::MouseEvent& event) override;
         void mouseDoubleClick (const juce::MouseEvent& event) override;
 
+        bool editable = true;
+
     private:
         juce::Label* valueLabel = nullptr;
     };
 
-    struct KnobControl
+    class KnobComponent final : public juce::Component
     {
+    public:
+        KnobComponent()
+        {
+            setPaintingIsUnclipped (true);
+            slider.setPaintingIsUnclipped (true);
+            addAndMakeVisible (slider);
+            addAndMakeVisible (nameLabel);
+            addChildComponent (valueLabel);
+        }
+
+        void paint (juce::Graphics& g) override;
+        void resized() override;
+
         ParameterSlider slider;
-        juce::Label name;
-        juce::Label value;
+        juce::Label nameLabel;
+        juce::Label valueLabel;
         juce::Colour knobColour;
         bool stepped = false;
         std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
+        juce::StringArray scaleLabels;
+        float scaleStartAngle = 0.0f;
+        float scaleEndAngle = 0.0f;
+        int scaleTickCount = 0;
+        int labelYOffset = 0;
+        bool vintageLayout = true;
     };
 
     struct ButtonControl
@@ -117,34 +269,56 @@ private:
     };
 
     void timerCallback() override;
-    void configureKnob (KnobControl& control,
+    void configureKnob (KnobComponent& control,
                         const juce::String& parameterId,
                         const juce::String& labelText,
                         juce::Colour knobColour,
+                        float startAngle,
+                        float endAngle,
                         bool stepped);
     void configureButton (ButtonControl& control, const juce::String& parameterId, const juce::String& labelText);
     void configureCommandButton (CommandButtonControl& control, const juce::String& labelText);
     void layoutContent();
-    void layoutKnob (KnobControl& control, juce::Rectangle<int> bounds);
+    void layoutCommandStrip();
     void layoutButton (ButtonControl& control, juce::Rectangle<int> bounds);
-    void layoutCommandButton (CommandButtonControl& control, juce::Rectangle<int> bounds);
-    void drawHardwareFrame (juce::Graphics& g, juce::Rectangle<int> bounds);
-    void drawSignature (juce::Graphics& g, juce::Rectangle<int> bounds);
-    void drawKnobScale (juce::Graphics& g,
-                        juce::Rectangle<int> bounds,
-                        const juce::StringArray& labels,
-                        float startAngle,
-                        float endAngle,
-                        bool majorLabels);
+
+    static void drawSignature (juce::Graphics& g);
+
     void updateValueLabels();
+    void layoutClassicContent();
+    void layoutVintageContent();
+    void layoutClassicButton (ButtonControl& control, juce::Rectangle<int> bounds);
+    void layoutClassicKnob (KnobComponent& control, juce::Rectangle<int> bounds);
+    void layoutClassicCommandButton (CommandButtonControl& control, juce::Rectangle<int> bounds);
+    void applyUiStyle (UiStyle style, bool resizeEditor);
+    void showHelpOverlay();
+    void closeHelpOverlay();
+    void updateUiStyleButton();
+    void paintClassic (juce::Graphics& g);
+    void drawClassicHardwareFrame (juce::Graphics& g, juce::Rectangle<int> bounds);
+    void drawClassicSignature (juce::Graphics& g, juce::Rectangle<int> bounds);
+    void drawClassicKnobScale (juce::Graphics& g,
+                               juce::Rectangle<int> bounds,
+                               const juce::StringArray& labels,
+                               float startAngle, float endAngle, bool majorLabels);
     void updateUndoRedoButtons();
     void updateCompareButtons();
     void updateOversamplingButton();
 
     DB5035AudioProcessor& audioProcessor;
+    PanelConstrainer panelConstrainer;
     HardwareLookAndFeel hardwareLookAndFeel;
+    ClassicLookAndFeel classicLookAndFeel;
+    FlatCommandLookAndFeel flatCommandLookAndFeel;
+    ScrewLookAndFeel screwLookAndFeel;
     juce::Component scaledContent;
-    std::array<KnobControl, 6> knobs;
+    juce::ImageComponent panelOverlay;
+    struct TextOverlay final : public juce::Component
+    {
+        void paint (juce::Graphics& g) override;
+        bool hitTest (int, int) override { return false; }
+    } textOverlay;
+    std::array<KnobComponent, 6> knobs;
     std::array<juce::String, 6> knobParameterIds;
     std::array<ButtonControl, 3> buttons;
     std::array<juce::String, 3> buttonParameterIds;
@@ -152,13 +326,17 @@ private:
     std::array<CommandButtonControl, 3> compareButtons;
     CommandButtonControl helpButton;
     CommandButtonControl oversamplingButton;
+    juce::TextButton uiStyleButton;
     HelpOverlay helpOverlay;
+    VUMeter vuMeter;
+    juce::TextButton vuModeButton;
     MeterBar inputMeter;
     MeterBar gainReductionMeter;
     MeterBar outputMeter;
     juce::Label inputMeterLabel;
     juce::Label gainReductionMeterLabel;
     juce::Label outputMeterLabel;
+    UiStyle uiStyle = UiStyle::classic;
     float gainReductionPeakHoldDb = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DB5035AudioProcessorEditor)
