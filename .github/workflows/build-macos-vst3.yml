@@ -1,0 +1,56 @@
+name: Build macOS VST3
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-vst3:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Apple Silicon (arm64)
+            runner: macos-14
+            expected_arch: arm64
+            artifact_name: DB-5035-Qing-Compressor-1.02-macOS-Apple-Silicon
+          - name: Intel (x86_64)
+            runner: macos-15-intel
+            expected_arch: x86_64
+            artifact_name: DB-5035-Qing-Compressor-1.02-macOS-Intel
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake -S source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce
+          -B build-macos
+          -DDB5035_FETCH_JUCE=ON
+          -DDB5035_ENABLE_VINTAGE_UI=ON
+          -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build VST3
+        run: cmake --build build-macos --target DB5035Compressor_VST3 --config Release --parallel 3
+
+      - name: Verify architecture and package VST3
+        shell: bash
+        run: |
+          vst3='build-macos/DB5035Compressor_artefacts/Release/VST3/DB-5035 Qing Compressor.vst3'
+          binary=$(find "$vst3/Contents/MacOS" -type f -print -quit)
+          test -n "$binary"
+          lipo -archs "$binary" | tr ' ' '\n' | grep -Fx '${{ matrix.expected_arch }}'
+          ditto -c -k --keepParent "$vst3" '${{ matrix.artifact_name }}.vst3.zip'
+
+      - name: Upload packaged VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}.vst3.zip
+          if-no-files-found: error
+          retention-days: 7
