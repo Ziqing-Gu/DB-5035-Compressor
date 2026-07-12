@@ -1,5 +1,28 @@
 #DB-5035-Qing-Compressor
 
+## 1.04 更新 / What's new in 1.04
+
+### 中文
+
+**1.04 汇集了 1.03 与 1.04 的改进；相较 1.02，重点如下：**
+
+- **Classic / Vintage 双 UI：** 可在右上角一键切换；插件会在下次打开时恢复用户上次选择的界面。
+- **Classic 边框修正：** 恢复面板外围应有的视觉边框，避免出现多余的黑色内圈。
+- **Vintage 参数提示：** 调整 Threshold、Gain、S/C HPF 或 Blend 时，会暂时显示实时数值；松开后自动隐藏。Ratio 与 Timing 保持硬件面板上的直观刻度，不显示冗余浮层。
+- **Vintage VU 表优化：** 表针改为从实时增益衰减驱动，以 60 Hz 更新并采用更灵敏、自然的响应；峰值保持读数独立保留。
+- **缩放稳定性：** 修正 Vintage 顶部固定工具条与可缩放面板之间的尺寸计算，避免在不同窗口大小下被裁切，或出现大面积无效黑边。
+- **保留 1.02 的兼容性措施：** Help 阅读布局、原有旋钮拖动手感和可选 Classic-only 构建方式均继续保留。
+
+### English
+
+**1.04 includes the 1.03 and 1.04 refinements. Compared with 1.02, it adds:**
+
+- **Classic / Vintage UI switching:** Use the top-right control to switch styles; the plugin restores the user's last selected UI when it reopens.
+- **Classic frame correction:** Restores the intended outer panel framing and removes the unwanted black inset border.
+- **Vintage parameter feedback:** Threshold, Gain, S/C HPF, and Blend show a temporary live value while being adjusted, then fade away. Ratio and Timing keep their clear hardware-panel scales without redundant overlays.
+- **Vintage VU meter refinement:** The needle is driven by real-time gain reduction, refreshed at 60 Hz with a faster, more natural response. The peak-hold readout remains separate.
+- **Reliable resizing:** Corrects the geometry between Vintage's fixed top command strip and its scalable panel, preventing clipping and excessive unused black space at different window sizes.
+- **1.02 safeguards retained:** The readable Help layout, original knob-drag feel, and optional Classic-only build remain available.
 ## 1.02 更新 / What's new in 1.02
 
 ### 中文

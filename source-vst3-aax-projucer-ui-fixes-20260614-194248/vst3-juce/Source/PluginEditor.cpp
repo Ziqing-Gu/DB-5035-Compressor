@@ -564,7 +564,7 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
     initialStyle = UiStyle::classic;
    #endif
     applyUiStyle (initialStyle, true);
-    startTimerHz (30);
+    startTimerHz (60);
     updateValueLabels();
     updateUndoRedoButtons();
     updateCompareButtons();
@@ -711,7 +711,7 @@ void DB5035AudioProcessorEditor::paintClassic (juce::Graphics& g)
     g.addTransform (getClassicContentTransform (getLocalBounds()));
 
     const auto designBounds = juce::Rectangle<int> (0, 0, classicDesignWidth, classicDesignHeight);
-    drawClassicHardwareFrame (g, designBounds.reduced (14));
+    drawClassicHardwareFrame (g, designBounds);
 
     auto module = designBounds.reduced (30);
     module.removeFromTop (36);
@@ -917,6 +917,7 @@ void DB5035AudioProcessorEditor::applyUiStyle (UiStyle style, bool resizeEditor)
         auto& knob = knobs[i];
         knob.vintageLayout = vintage;
         knob.labelYOffset = vintage && (i == 1 || i == 3) ? -13 : 0;
+        knob.slider.showValueWhileDragging = vintage && i != 1 && i != 3;
         knob.slider.editable = ! vintage || (i != 1 && i != 3);
         const auto knobColour = vintage ? vintageKnobColours[i] : classicKnobColours[i];
         knob.knobColour = knobColour;
@@ -929,8 +930,11 @@ void DB5035AudioProcessorEditor::applyUiStyle (UiStyle style, bool resizeEditor)
         knob.valueLabel.setColour (juce::Label::textColourId, vintage ? text : classicText);
         knob.valueLabel.setColour (juce::Label::outlineWhenEditingColourId, vintage ? amber : classicAmber);
         knob.valueLabel.setFont (juce::Font (uiFont (12.0f, vintage ? juce::Font::plain : juce::Font::bold)));
+        knob.valueLabel.setColour (juce::Label::backgroundColourId,
+                                   vintage ? juce::Colour (0xdd11110f) : juce::Colours::transparentBlack);
         knob.valueLabel.setVisible (! vintage);
 
+        knob.nameLabel.setVisible (true);
         if (vintage)
         {
             const auto pi = juce::MathConstants<float>::pi;
@@ -1068,7 +1072,10 @@ void DB5035AudioProcessorEditor::configureKnob (KnobComponent& control,
     control.valueLabel.onEditorHide = [&control]
     {
         if (control.vintageLayout)
+        {
             control.valueLabel.setVisible (false);
+            control.nameLabel.setVisible (true);
+        }
     };
 
     control.slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
@@ -1079,6 +1086,15 @@ void DB5035AudioProcessorEditor::configureKnob (KnobComponent& control,
     control.slider.setColour (juce::Slider::thumbColourId, knobColour);
     control.slider.setColour (juce::Slider::rotarySliderFillColourId, amber);
     control.slider.setColour (juce::Slider::rotarySliderOutlineColourId, line);
+    control.slider.setNameLabel (&control.nameLabel);
+    control.slider.valueTextFormatter = [this, parameterId]
+    {
+        if (auto* parameter = audioProcessor.getValueTreeState().getParameter (parameterId))
+            return formatValue (*parameter);
+
+        return juce::String();
+    };
+
     control.slider.setValueLabel (&control.valueLabel);
 
     control.attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
@@ -1193,8 +1209,7 @@ void DB5035AudioProcessorEditor::KnobComponent::resized()
         slider.setBounds (sliderBounds);
         const auto sliderBottom = slider.getBounds().getBottom();
         nameLabel.setBounds (0, sliderBottom + 16 + labelYOffset, getWidth(), 20);
-        const auto sliderCentre = slider.getBounds().getCentre();
-        valueLabel.setBounds (sliderCentre.x - 30, sliderCentre.y - 10, 60, 20);
+        valueLabel.setBounds (0, sliderBottom + 16 + labelYOffset, getWidth(), 20);
     }
     else
     {
@@ -1332,6 +1347,27 @@ void DB5035AudioProcessorEditor::ParameterSlider::setValueLabel (juce::Label* la
     valueLabel = labelToUse;
 }
 
+void DB5035AudioProcessorEditor::ParameterSlider::setNameLabel (juce::Label* labelToUse)
+{
+    nameLabel = labelToUse;
+}
+
+juce::String DB5035AudioProcessorEditor::ParameterSlider::getDisplayText() const
+{
+    return valueTextFormatter ? valueTextFormatter() : const_cast<ParameterSlider*> (this)->getTextFromValue (getValue());
+}
+
+void DB5035AudioProcessorEditor::ParameterSlider::showTransientValue()
+{
+    if (valueLabel == nullptr)
+        return;
+
+    valueLabel->setText (getDisplayText(), juce::dontSendNotification);
+    if (nameLabel != nullptr)
+        nameLabel->setVisible (false);
+    valueLabel->setVisible (true);
+}
+
 void DB5035AudioProcessorEditor::ParameterSlider::mouseDown (const juce::MouseEvent& event)
 {
     if (event.mods.isAltDown())
@@ -1341,6 +1377,29 @@ void DB5035AudioProcessorEditor::ParameterSlider::mouseDown (const juce::MouseEv
     }
 
     juce::Slider::mouseDown (event);
+
+    if (showValueWhileDragging && valueLabel != nullptr)
+        showTransientValue();
+}
+
+void DB5035AudioProcessorEditor::ParameterSlider::mouseDrag (const juce::MouseEvent& event)
+{
+    juce::Slider::mouseDrag (event);
+
+    if (showValueWhileDragging && valueLabel != nullptr)
+        showTransientValue();
+}
+
+void DB5035AudioProcessorEditor::ParameterSlider::mouseUp (const juce::MouseEvent& event)
+{
+    juce::Slider::mouseUp (event);
+
+    if (showValueWhileDragging && valueLabel != nullptr && ! valueLabel->isBeingEdited())
+    {
+        valueLabel->setVisible (false);
+        if (nameLabel != nullptr)
+            nameLabel->setVisible (true);
+    }
 }
 
 void DB5035AudioProcessorEditor::ParameterSlider::mouseDoubleClick (const juce::MouseEvent& event)
@@ -1354,7 +1413,9 @@ void DB5035AudioProcessorEditor::ParameterSlider::mouseDoubleClick (const juce::
 
     if (valueLabel != nullptr)
     {
-        valueLabel->setText (getTextFromValue (getValue()), juce::dontSendNotification);
+        valueLabel->setText (getDisplayText(), juce::dontSendNotification);
+        if (nameLabel != nullptr && showValueWhileDragging)
+            nameLabel->setVisible (false);
         valueLabel->setVisible (true);
         valueLabel->showEditor();
         if (auto* editor = valueLabel->getCurrentTextEditor())
@@ -1687,8 +1748,26 @@ void DB5035AudioProcessorEditor::VUMeter::setValue (float newValueDb, float newM
     const auto normalised = dbToNormalised (displayValue);
     targetAngle = startAngle + normalised * sweep;
 
-    const auto smoothing = 0.18f;
-    smoothedAngle += (targetAngle - smoothedAngle) * smoothing;
+    const auto nowMs = juce::Time::getMillisecondCounterHiRes();
+    const auto elapsedMs = lastNeedleUpdateMs > 0.0
+                             ? juce::jlimit (1.0, 100.0, nowMs - lastNeedleUpdateMs)
+                             : 1000.0;
+    lastNeedleUpdateMs = nowMs;
+
+    if (! hasNeedlePosition)
+    {
+        smoothedAngle = targetAngle;
+        hasNeedlePosition = true;
+    }
+    else
+    {
+        const auto isIncreasingDeflection = mode == Mode::reduction
+                                                ? targetAngle < smoothedAngle
+                                                : targetAngle > smoothedAngle;
+        const auto timeConstantMs = isIncreasingDeflection ? 65.0 : 110.0;
+        const auto smoothing = 1.0f - std::exp ((float) (-elapsedMs / timeConstantMs));
+        smoothedAngle += (targetAngle - smoothedAngle) * smoothing;
+    }
 
     repaint();
 }

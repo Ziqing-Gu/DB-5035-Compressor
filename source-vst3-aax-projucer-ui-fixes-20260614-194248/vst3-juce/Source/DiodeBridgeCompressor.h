@@ -42,6 +42,7 @@ public:
     {
         heldGainReductionDb = 0.0f;
         inputPeak = 0.0f;
+        meterGainReductionDb = 0.0f;
         outputPeak = 0.0f;
         linkedEnvelope = 0.0f;
         linkedSlowPreviewEnvelope = 0.0f;
@@ -96,6 +97,7 @@ public:
             meters.outputDb = meters.inputDb;
             meters.gainReductionDb = 0.0f;
             inputPeak = 0.0f;
+            meterGainReductionDb = 0.0f;
             outputPeak = 0.0f;
             heldGainReductionDb = 0.0f;
             linkedTransientPass = 0.0f;
@@ -147,7 +149,7 @@ public:
 
         meters.inputDb = linearToDb (inputPeak);
         meters.outputDb = linearToDb (outputPeak);
-        meters.gainReductionDb = heldGainReductionDb;
+        meters.gainReductionDb = meterGainReductionDb;
 
         inputPeak = 0.0f;
         outputPeak = 0.0f;
@@ -1670,6 +1672,7 @@ private:
         const auto numChannels = buffer.getNumChannels();
         const auto ratio = getRatio();
 
+        auto blockGainReduction = 0.0f;
         for (int sampleIndex = 0; sampleIndex < buffer.getNumSamples(); ++sampleIndex)
         {
             auto detector = 0.0f;
@@ -1704,9 +1707,12 @@ private:
             gainResult = applyAutoAttackShoulderDip (gainResult, detector, linkedEnvelope, ratio);
             heldGainReductionDb = juce::jmax (heldGainReductionDb * 0.995f, gainResult.gainReductionDb);
 
+            blockGainReduction = juce::jmax (blockGainReduction, gainResult.gainReductionDb);
             for (int channel = 0; channel < numChannels; ++channel)
                 writeOutputSample (buffer, channel, sampleIndex, ratio, gainResult.gain, outputGain, wet, dry, transientPass);
         }
+
+        meterGainReductionDb = blockGainReduction;
     }
 
     void processDualMono (juce::AudioBuffer<float>& buffer,
@@ -1720,9 +1726,10 @@ private:
         const auto numChannels = buffer.getNumChannels();
         const auto ratio = getRatio();
 
+        auto blockGainReduction = 0.0f;
         for (int sampleIndex = 0; sampleIndex < buffer.getNumSamples(); ++sampleIndex)
         {
-            auto blockGainReduction = 0.0f;
+            auto sampleGainReduction = 0.0f;
 
             for (int channel = 0; channel < numChannels; ++channel)
             {
@@ -1755,12 +1762,15 @@ private:
                                                                  ratio);
                 gainResult = applySlowInstantPeakControl (gainResult, detector, envelope, ratio);
                 gainResult = applyAutoAttackShoulderDip (gainResult, detector, envelope, ratio);
-                blockGainReduction = juce::jmax (blockGainReduction, gainResult.gainReductionDb);
+                sampleGainReduction = juce::jmax (sampleGainReduction, gainResult.gainReductionDb);
                 writeOutputSample (buffer, channel, sampleIndex, ratio, gainResult.gain, outputGain, wet, dry, transientPass);
             }
 
-            heldGainReductionDb = juce::jmax (heldGainReductionDb * 0.995f, blockGainReduction);
+            blockGainReduction = juce::jmax (blockGainReduction, sampleGainReduction);
+            heldGainReductionDb = juce::jmax (heldGainReductionDb * 0.995f, sampleGainReduction);
         }
+
+        meterGainReductionDb = blockGainReduction;
     }
 
     void writeOutputSample (juce::AudioBuffer<float>& buffer,
@@ -1898,5 +1908,6 @@ private:
     int linkedAttackDipArmed = 1;
     float heldGainReductionDb = 0.0f;
     float inputPeak = 0.0f;
+    float meterGainReductionDb = 0.0f;
     float outputPeak = 0.0f;
 };
