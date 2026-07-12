@@ -711,7 +711,7 @@ void DB5035AudioProcessorEditor::paintClassic (juce::Graphics& g)
     g.addTransform (getClassicContentTransform (getLocalBounds()));
 
     const auto designBounds = juce::Rectangle<int> (0, 0, classicDesignWidth, classicDesignHeight);
-    drawClassicHardwareFrame (g, designBounds.reduced (14));
+    drawClassicHardwareFrame (g, designBounds);
 
     auto module = designBounds.reduced (30);
     module.removeFromTop (36);
@@ -917,6 +917,7 @@ void DB5035AudioProcessorEditor::applyUiStyle (UiStyle style, bool resizeEditor)
         auto& knob = knobs[i];
         knob.vintageLayout = vintage;
         knob.labelYOffset = vintage && (i == 1 || i == 3) ? -13 : 0;
+        knob.slider.showValueWhileDragging = vintage;
         knob.slider.editable = ! vintage || (i != 1 && i != 3);
         const auto knobColour = vintage ? vintageKnobColours[i] : classicKnobColours[i];
         knob.knobColour = knobColour;
@@ -929,6 +930,8 @@ void DB5035AudioProcessorEditor::applyUiStyle (UiStyle style, bool resizeEditor)
         knob.valueLabel.setColour (juce::Label::textColourId, vintage ? text : classicText);
         knob.valueLabel.setColour (juce::Label::outlineWhenEditingColourId, vintage ? amber : classicAmber);
         knob.valueLabel.setFont (juce::Font (uiFont (12.0f, vintage ? juce::Font::plain : juce::Font::bold)));
+        knob.valueLabel.setColour (juce::Label::backgroundColourId,
+                                   vintage ? juce::Colour (0xdd11110f) : juce::Colours::transparentBlack);
         knob.valueLabel.setVisible (! vintage);
 
         if (vintage)
@@ -1341,6 +1344,28 @@ void DB5035AudioProcessorEditor::ParameterSlider::mouseDown (const juce::MouseEv
     }
 
     juce::Slider::mouseDown (event);
+
+    if (showValueWhileDragging && valueLabel != nullptr)
+    {
+        valueLabel->setText (getTextFromValue (getValue()), juce::dontSendNotification);
+        valueLabel->setVisible (true);
+    }
+}
+
+void DB5035AudioProcessorEditor::ParameterSlider::mouseDrag (const juce::MouseEvent& event)
+{
+    juce::Slider::mouseDrag (event);
+
+    if (showValueWhileDragging && valueLabel != nullptr)
+        valueLabel->setText (getTextFromValue (getValue()), juce::dontSendNotification);
+}
+
+void DB5035AudioProcessorEditor::ParameterSlider::mouseUp (const juce::MouseEvent& event)
+{
+    juce::Slider::mouseUp (event);
+
+    if (showValueWhileDragging && valueLabel != nullptr && ! valueLabel->isBeingEdited())
+        valueLabel->setVisible (false);
 }
 
 void DB5035AudioProcessorEditor::ParameterSlider::mouseDoubleClick (const juce::MouseEvent& event)

@@ -195,9 +195,12 @@ private:
         void setValueLabel (juce::Label* labelToUse);
 
         void mouseDown (const juce::MouseEvent& event) override;
+        void mouseDrag (const juce::MouseEvent& event) override;
+        void mouseUp (const juce::MouseEvent& event) override;
         void mouseDoubleClick (const juce::MouseEvent& event) override;
 
         bool editable = true;
+        bool showValueWhileDragging = false;
 
     private:
         juce::Label* valueLabel = nullptr;
