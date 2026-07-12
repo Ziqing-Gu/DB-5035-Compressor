@@ -6,6 +6,9 @@
 
 1.02 是一次以 UI、可用性和跨平台构建为重点的更新。
 
+<img width="1202" height="255" alt="image" src="https://github.com/user-attachments/assets/489f6175-94c9-42a6-a7da-034fa76de2bf" />
+
+
 - **Classic / Vintage 双 UI：** 右上角可一键切换两套界面；插件会记住上一次选择的 UI 模式。该本地偏好优先于 DAW 工程中旧的实例状态，方便在不同工程之间保持一致的工作方式。
 - **保留原有操作手感：** Vintage UI 的视觉设计被整合，但旋钮鼠标拖动速度保持原版；`COMP IN` 在加载工程时继续尊重该工程保存的开关状态，不会被强制打开。
 - **窗口与 Help 改进：** 编辑器可正常放大和缩小，并保持界面比例；Vintage UI 打开 Help 时会临时扩展为更大的阅读布局，关闭后恢复正常面板尺寸。
