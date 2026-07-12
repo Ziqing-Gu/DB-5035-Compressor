@@ -1,5 +1,29 @@
 #DB-5035-Qing-Compressor
 
+## 1.02 更新 / What's new in 1.02
+
+### 中文
+
+1.02 是一次以 UI、可用性和跨平台构建为重点的更新。
+
+- **Classic / Vintage 双 UI：** 右上角可一键切换两套界面；插件会记住上一次选择的 UI 模式。该本地偏好优先于 DAW 工程中旧的实例状态，方便在不同工程之间保持一致的工作方式。
+- **保留原有操作手感：** Vintage UI 的视觉设计被整合，但旋钮鼠标拖动速度保持原版；`COMP IN` 在加载工程时继续尊重该工程保存的开关状态，不会被强制打开。
+- **窗口与 Help 改进：** 编辑器可正常放大和缩小，并保持界面比例；Vintage UI 打开 Help 时会临时扩展为更大的阅读布局，关闭后恢复正常面板尺寸。
+- **可选 Vintage UI：** 维护者可在 CMake 中使用 `-DDB5035_ENABLE_VINTAGE_UI=OFF` 构建仅含 Classic UI 的版本；此模式不会打包 Vintage UI 资源或显示切换按钮，方便在需要时快速回退到纯 Classic 界面。
+- **原生 macOS VST3 构建：** 仓库提供手动触发的 **Build macOS VST3** GitHub Actions 工作流，可分别生成 Apple Silicon（arm64）与 Intel（x86_64）原生 VST3 包，并在构建时校验二进制架构。
+- **贡献与资源说明：** Vintage UI 的设计和实现基础来自 GitHub 贡献者 [@tangshaozhu](https://github.com/tangshaozhu) 的 PR #3，相关提交历史已保留。Vintage UI 使用的 Open Sans 资源说明见 [`THIRD_PARTY_NOTICES.md`](source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce/THIRD_PARTY_NOTICES.md)。
+
+### English
+
+Version 1.02 focuses on UI flexibility, usability, and cross-platform builds.
+
+- **Classic / Vintage UI switch:** Use the top-right control to switch between the two interfaces. The plugin remembers the most recently selected UI style; this local preference intentionally takes precedence over old instance state restored by a DAW project.
+- **Original interaction behavior retained:** The Vintage visual design is integrated without changing the original knob drag sensitivity. `COMP IN` continues to respect the state saved in each project and is not forced on when a project loads.
+- **Resizing and Help improvements:** The editor can now grow and shrink while preserving its intended proportions. Opening Help in Vintage mode temporarily expands the editor into a readable layout and restores the normal panel size when closed.
+- **Optional Vintage UI:** Maintainers can build a Classic-only fallback with `-DDB5035_ENABLE_VINTAGE_UI=OFF`. That configuration omits Vintage resources and hides the style switch.
+- **Native macOS VST3 builds:** The manual **Build macOS VST3** GitHub Actions workflow creates and validates separate native Apple Silicon (arm64) and Intel (x86_64) VST3 packages.
+- **Contribution and resources:** The Vintage UI design and implementation foundation comes from GitHub contributor [@tangshaozhu](https://github.com/tangshaozhu) via PR #3; the contributor history is preserved. See [`THIRD_PARTY_NOTICES.md`](source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce/THIRD_PARTY_NOTICES.md) for the Open Sans resource notice.
+
 本项目是一个建模自真实 Rupert Neve 5035 前级话放通道条的音频压缩插件。目前据我了解，市面上似乎没有任何一款音频插件是模仿或建模自这台世界顶尖的设备。
 
 This project is an audio compressor plugin modeled after the compressor section of the real Rupert Neve 5035 Mic Pre / Channel Strip. To the best of my knowledge, there are currently no commercial audio plugins on the market that attempt to emulate or model this world-class piece of hardware.
