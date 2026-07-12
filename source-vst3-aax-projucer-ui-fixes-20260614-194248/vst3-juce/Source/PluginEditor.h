@@ -326,6 +326,7 @@ private:
     void updateUndoRedoButtons();
     void updateCompareButtons();
     void updateOversamplingButton();
+    void updateVuModeFromProcessor();
 
     DB5035AudioProcessor& audioProcessor;
     PanelConstrainer panelConstrainer;

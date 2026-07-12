@@ -1017,8 +1017,22 @@ void DB5035AudioProcessorEditor::updateUiStyleButton()
    #endif
 }
 
+void DB5035AudioProcessorEditor::updateVuModeFromProcessor()
+{
+    static const VUMeter::Mode modes[] = { VUMeter::Mode::input, VUMeter::Mode::output, VUMeter::Mode::reduction };
+    static const juce::String labels[] = { "IN", "OUT", "REDUCTION" };
+    const auto selectedMode = juce::jlimit (0, 2, audioProcessor.getVuMode());
+
+    if (static_cast<int> (vuMeter.getMode()) != selectedMode)
+        vuMeter.setMode (modes[selectedMode]);
+
+    if (vuModeButton.getButtonText() != labels[selectedMode])
+        vuModeButton.setButtonText (labels[selectedMode]);
+}
+
 void DB5035AudioProcessorEditor::timerCallback()
 {
+    updateVuModeFromProcessor();
     const auto meters = audioProcessor.getMeters();
     gainReductionPeakHoldDb = juce::jmax (gainReductionPeakHoldDb, meters.gainReductionDb);
     inputMeter.setValue (meters.inputDb, -60.0f, 6.0f, false);

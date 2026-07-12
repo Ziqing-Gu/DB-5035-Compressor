@@ -21,6 +21,7 @@ namespace
     constexpr auto compareStateTag = "CompareSlots";
     constexpr auto compareStateActive = "active";
     constexpr auto uiStylePreferenceKey = "uiStyle";
+    constexpr auto vuModePreferenceKey = "vuMode";
 
     std::unique_ptr<juce::PropertiesFile> createUiPreferences()
     {
@@ -102,6 +103,7 @@ DB5035AudioProcessor::DB5035AudioProcessor()
 {
     uiPreferences = createUiPreferences();
     uiStyle = juce::jlimit (0, 1, uiPreferences->getIntValue (uiStylePreferenceKey, uiStyle));
+    vuMode = juce::jlimit (0, 2, uiPreferences->getIntValue (vuModePreferenceKey, vuMode));
 }
 
 void DB5035AudioProcessor::setUiStyle (int style)
@@ -110,6 +112,14 @@ void DB5035AudioProcessor::setUiStyle (int style)
 
     if (uiPreferences != nullptr)
         uiPreferences->setValue (uiStylePreferenceKey, uiStyle);
+}
+
+void DB5035AudioProcessor::setVuMode (int mode)
+{
+    vuMode = juce::jlimit (0, 2, mode);
+
+    if (uiPreferences != nullptr)
+        uiPreferences->setValue (vuModePreferenceKey, vuMode);
 }
 
 void DB5035AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
@@ -263,7 +273,6 @@ void DB5035AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto stateTree = parameters.copyState();
     stateTree.appendChild (createCompareStateTree(), nullptr);
-    stateTree.setProperty ("vuMode", vuMode, nullptr);
     stateTree.setProperty ("uiStyle", uiStyle, nullptr);
 
     if (auto state = stateTree.createXml())
@@ -288,8 +297,8 @@ void DB5035AudioProcessor::setStateInformation (const void* data, int sizeInByte
             else
                 initialiseCompareSlotsFromCurrent();
 
-            if (stateTree.hasProperty ("vuMode"))
-                vuMode = (int) stateTree.getProperty ("vuMode");
+            // The VU display is a local UI preference, like uiStyle. Do not let a
+            // previously saved DAW project override the user's latest selection.
         }
 }
 

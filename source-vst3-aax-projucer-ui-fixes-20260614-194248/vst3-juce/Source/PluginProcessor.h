@@ -43,7 +43,7 @@ public:
     void copyCompareAToB();
     int getActiveCompareSlot() const { return activeCompareSlot; }
     int getVuMode() const { return vuMode; }
-    void setVuMode (int mode) { vuMode = mode; }
+    void setVuMode (int mode);
     int getUiStyle() const { return uiStyle; }
     void setUiStyle (int style);
 
