@@ -1,4 +1,4 @@
-name: Build macOS VST3
+name: Build macOS VST3 and AU
 
 on:
   workflow_dispatch:
@@ -17,11 +17,11 @@ jobs:
           - name: Apple Silicon (arm64)
             runner: macos-14
             expected_arch: arm64
-            artifact_name: DB-5035-Qing-Compressor-1.05-macOS-Apple-Silicon
+            artifact_name: DB-5035-Qing-Compressor-1.06-macOS-Apple-Silicon
           - name: Intel (x86_64)
             runner: macos-15-intel
             expected_arch: x86_64
-            artifact_name: DB-5035-Qing-Compressor-1.05-macOS-Intel
+            artifact_name: DB-5035-Qing-Compressor-1.06-macOS-Intel
 
     steps:
       - name: Check out source
@@ -35,22 +35,41 @@ jobs:
           -DDB5035_ENABLE_VINTAGE_UI=ON
           -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build VST3
-        run: cmake --build build-macos --target DB5035Compressor_VST3 --config Release --parallel 3
+      - name: Build VST3 and AU
+        run: cmake --build build-macos --target DB5035Compressor_VST3 DB5035Compressor_AU --config Release --parallel 3
 
-      - name: Verify architecture and package VST3
+      - name: Validate AU for Logic
+        shell: bash
+        run: |
+          killall -9 AudioComponentRegistrar || true
+          auval -v aufx Db3Q CdxA
+
+      - name: Verify architecture and package plugins
         shell: bash
         run: |
           vst3='build-macos/DB5035Compressor_artefacts/Release/VST3/DB-5035 Qing Compressor.vst3'
-          binary=$(find "$vst3/Contents/MacOS" -type f -print -quit)
-          test -n "$binary"
-          lipo -archs "$binary" | tr ' ' '\n' | grep -Fx '${{ matrix.expected_arch }}'
+          au='build-macos/DB5035Compressor_artefacts/Release/AU/DB-5035 Qing Compressor.component'
+          vst3_binary=$(find "$vst3/Contents/MacOS" -type f -print -quit)
+          au_binary=$(find "$au/Contents/MacOS" -type f -print -quit)
+          test -n "$vst3_binary"
+          test -n "$au_binary"
+          lipo -archs "$vst3_binary" | tr ' ' '\n' | grep -Fx '${{ matrix.expected_arch }}'
+          lipo -archs "$au_binary" | tr ' ' '\n' | grep -Fx '${{ matrix.expected_arch }}'
           ditto -c -k --keepParent "$vst3" '${{ matrix.artifact_name }}.vst3.zip'
+          ditto -c -k --keepParent "$au" '${{ matrix.artifact_name }}.component.zip'
 
       - name: Upload packaged VST3
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
+          name: ${{ matrix.artifact_name }}-VST3
           path: ${{ matrix.artifact_name }}.vst3.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload packaged AU
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}-AU
+          path: ${{ matrix.artifact_name }}.component.zip
           if-no-files-found: error
           retention-days: 7

@@ -23,6 +23,18 @@ namespace
     constexpr auto uiStylePreferenceKey = "uiStyle";
     constexpr auto vuModePreferenceKey = "vuMode";
 
+    void accumulateMeterPeak (std::atomic<float>& destination, float value)
+    {
+        auto current = destination.load (std::memory_order_relaxed);
+
+        while (value > current
+               && ! destination.compare_exchange_weak (current, value,
+                                                       std::memory_order_relaxed,
+                                                       std::memory_order_relaxed))
+        {
+        }
+    }
+
     std::unique_ptr<juce::PropertiesFile> createUiPreferences()
     {
         juce::PropertiesFile::Options options;
@@ -206,6 +218,9 @@ void DB5035AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     inputMeterDb.store (meters.inputDb, std::memory_order_relaxed);
     outputMeterDb.store (meters.outputDb, std::memory_order_relaxed);
     gainReductionDb.store (meters.gainReductionDb, std::memory_order_relaxed);
+    accumulateMeterPeak (pendingInputMeterPeakDb, meters.inputDb);
+    accumulateMeterPeak (pendingOutputMeterPeakDb, meters.outputDb);
+    accumulateMeterPeak (pendingGainReductionPeakDb, meters.gainReductionDb);
 }
 
 juce::AudioProcessorEditor* DB5035AudioProcessor::createEditor()
@@ -308,6 +323,20 @@ DiodeBridgeCompressorMeters DB5035AudioProcessor::getMeters() const
         inputMeterDb.load (std::memory_order_relaxed),
         outputMeterDb.load (std::memory_order_relaxed),
         gainReductionDb.load (std::memory_order_relaxed)
+    };
+}
+
+DiodeBridgeCompressorMeters DB5035AudioProcessor::consumeMeterPeaks()
+{
+    const auto latest = getMeters();
+    const auto inputPeak = pendingInputMeterPeakDb.exchange (-80.0f, std::memory_order_relaxed);
+    const auto outputPeak = pendingOutputMeterPeakDb.exchange (-80.0f, std::memory_order_relaxed);
+    const auto reductionPeak = pendingGainReductionPeakDb.exchange (0.0f, std::memory_order_relaxed);
+
+    return {
+        juce::jmax (latest.inputDb, inputPeak),
+        juce::jmax (latest.outputDb, outputPeak),
+        juce::jmax (latest.gainReductionDb, reductionPeak)
     };
 }
 

@@ -39,6 +39,7 @@ public:
     APVTS& getValueTreeState() { return parameters; }
     juce::UndoManager& getUndoManager() { return undoManager; }
     DiodeBridgeCompressorMeters getMeters() const;
+    DiodeBridgeCompressorMeters consumeMeterPeaks();
     void selectCompareSlot (int slotIndex);
     void copyCompareAToB();
     int getActiveCompareSlot() const { return activeCompareSlot; }
@@ -84,6 +85,9 @@ private:
     std::atomic<float> inputMeterDb { -80.0f };
     std::atomic<float> outputMeterDb { -80.0f };
     std::atomic<float> gainReductionDb { 0.0f };
+    std::atomic<float> pendingInputMeterPeakDb { -80.0f };
+    std::atomic<float> pendingOutputMeterPeakDb { -80.0f };
+    std::atomic<float> pendingGainReductionPeakDb { 0.0f };
     int vuMode = 0;
     int uiStyle = 0;
 
