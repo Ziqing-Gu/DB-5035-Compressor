@@ -17,11 +17,11 @@ jobs:
           - name: Apple Silicon (arm64)
             runner: macos-14
             expected_arch: arm64
-            artifact_name: DB-5035-Qing-Compressor-1.05-macOS-Apple-Silicon
+            artifact_name: DB-5035-Qing-Compressor-1.06-macOS-Apple-Silicon
           - name: Intel (x86_64)
             runner: macos-15-intel
             expected_arch: x86_64
-            artifact_name: DB-5035-Qing-Compressor-1.05-macOS-Intel
+            artifact_name: DB-5035-Qing-Compressor-1.06-macOS-Intel
 
     steps:
       - name: Check out source

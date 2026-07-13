@@ -335,9 +335,15 @@ void DB5035AudioProcessorEditor::HelpOverlay::paint (juce::Graphics& g)
 
     auto content = card.toNearestInt().reduced (24, 18);
     auto header = content.removeFromTop (34);
+    auto versionBounds = header.removeFromRight (150);
     g.setColour (cream);
     g.setFont (uiFont (18.0f, juce::Font::bold));
     g.drawText ("DB-5035 Qing Compressor", header, juce::Justification::centredLeft);
+    g.setColour (muted);
+    g.setFont (uiFont (12.0f));
+    g.drawText (juce::String ("Version ") + JucePlugin_VersionString,
+                versionBounds,
+                juce::Justification::centredRight);
 }
 
 DB5035AudioProcessorEditor::HelpOverlay::HelpContent::HelpContent()
@@ -564,6 +570,7 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
     initialStyle = UiStyle::classic;
    #endif
     applyUiStyle (initialStyle, true);
+    audioProcessor.consumeMeterPeaks();
     startTimerHz (60);
     updateValueLabels();
     updateUndoRedoButtons();
@@ -1034,7 +1041,8 @@ void DB5035AudioProcessorEditor::timerCallback()
 {
     updateVuModeFromProcessor();
     const auto meters = audioProcessor.getMeters();
-    gainReductionPeakHoldDb = juce::jmax (gainReductionPeakHoldDb, meters.gainReductionDb);
+    const auto vuPeaks = audioProcessor.consumeMeterPeaks();
+    gainReductionPeakHoldDb = juce::jmax (gainReductionPeakHoldDb, vuPeaks.gainReductionDb);
     inputMeter.setValue (meters.inputDb, -60.0f, 6.0f, false);
     gainReductionMeter.setPeakHold (gainReductionPeakHoldDb);
     gainReductionMeter.setValue (meters.gainReductionDb, 0.0f, 24.0f, true);
@@ -1043,14 +1051,14 @@ void DB5035AudioProcessorEditor::timerCallback()
     switch (vuMeter.getMode())
     {
         case VUMeter::Mode::input:
-            vuMeter.setValue (meters.inputDb, -24.0f, 3.0f);
+            vuMeter.setValue (vuPeaks.inputDb, -24.0f, 3.0f);
             break;
         case VUMeter::Mode::output:
-            vuMeter.setValue (meters.outputDb, -24.0f, 3.0f);
+            vuMeter.setValue (vuPeaks.outputDb, -24.0f, 3.0f);
             break;
         case VUMeter::Mode::reduction:
             vuMeter.setPeakHold (gainReductionPeakHoldDb);
-            vuMeter.setValue (meters.gainReductionDb, 0.0f, 24.0f);
+            vuMeter.setValue (vuPeaks.gainReductionDb, 0.0f, 24.0f);
             break;
     }
     const auto storedStyle = audioProcessor.getUiStyle() == (int) UiStyle::vintage ? UiStyle::vintage : UiStyle::classic;
@@ -1739,7 +1747,12 @@ void DB5035AudioProcessorEditor::FlatCommandLookAndFeel::drawButtonText (juce::G
 
 void DB5035AudioProcessorEditor::VUMeter::setMode (Mode newMode)
 {
+    if (mode == newMode)
+        return;
+
     mode = newMode;
+    hasNeedlePosition = false;
+    lastNeedleUpdateMs = 0.0;
     repaint();
 }
 
@@ -1764,7 +1777,7 @@ void DB5035AudioProcessorEditor::VUMeter::setValue (float newValueDb, float newM
 
     const auto nowMs = juce::Time::getMillisecondCounterHiRes();
     const auto elapsedMs = lastNeedleUpdateMs > 0.0
-                             ? juce::jlimit (1.0, 100.0, nowMs - lastNeedleUpdateMs)
+                             ? juce::jmax (1.0, nowMs - lastNeedleUpdateMs)
                              : 1000.0;
     lastNeedleUpdateMs = nowMs;
 
