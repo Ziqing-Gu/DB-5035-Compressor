@@ -83,6 +83,8 @@ Version 1.02 focuses on UI flexibility, usability, and cross-platform builds.
 - **Native macOS VST3 builds:** The manual **Build macOS VST3** GitHub Actions workflow creates and validates separate native Apple Silicon (arm64) and Intel (x86_64) VST3 packages.
 - **Contribution and resources:** The Vintage UI design and implementation foundation comes from GitHub contributor [@tangshaozhu](https://github.com/tangshaozhu) via PR #3; the contributor history is preserved. See [`THIRD_PARTY_NOTICES.md`](source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce/THIRD_PARTY_NOTICES.md) for the Open Sans resource notice.
 
+## 1.0 版本 / Version 1.0
+
 本项目是一个建模自真实 Rupert Neve 5035 前级话放通道条的音频压缩插件。目前据我了解，市面上似乎没有任何一款音频插件是模仿或建模自这台世界顶尖的设备。
 
 This project is an audio compressor plugin modeled after the compressor section of the real Rupert Neve 5035 Mic Pre / Channel Strip. To the best of my knowledge, there are currently no commercial audio plugins on the market that attempt to emulate or model this world-class piece of hardware.
