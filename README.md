@@ -7,14 +7,14 @@
 - **Vintage VU 瞬态反馈：** 音频线程会保留两次 60 Hz 界面刷新之间出现的最高表值，避免短促音头被后续较安静的音频块覆盖，改善播放位置与表针反馈不一致的观感。
 - **保留硬件式指针手感：** 正常播放时继续使用此前依据真实硬件对比确定的 65 ms 上升与 110 ms 回落惯性；本次没有加快或改写这组校准参数。
 - **卡顿与模式切换修复：** 界面短暂阻塞后，表针会按真实经过时间追上目标；切换 IN、OUT 或 REDUCTION 时会从新模式的当前读数开始，不再继承上一模式的旧指针位置。
-- **版本信息与 macOS 构建：** Help 界面现在显示插件版本号；GitHub Actions 产物已更新为 1.06，并继续分别构建 Apple Silicon（arm64）和 Intel（x86_64）VST3。
+- **版本信息、VST3 与 Logic AU：** Help 界面现在显示插件版本号；GitHub Actions 产物已更新为 1.06，并分别构建 Apple Silicon（arm64）和 Intel（x86_64）的 VST3 与 Logic 兼容 AU。
 
 ### English
 
 - **Vintage VU transient feedback:** The audio thread retains the highest meter value occurring between 60 Hz UI refreshes, so short attacks are not overwritten by a quieter block before the editor reads them.
 - **Hardware-style needle feel retained:** Normal playback still uses the previously hardware-referenced 65 ms attack and 110 ms return inertia; this release does not speed up or replace those calibrated values.
 - **Stall and mode-switch fixes:** The needle catches up using real elapsed time after a temporary UI stall. Switching between IN, OUT, and REDUCTION starts from the current reading for the new mode instead of inheriting the previous mode's needle position.
-- **Version display and macOS builds:** Help now shows the plugin version. GitHub Actions artifacts are labeled 1.06 and continue to build separate Apple Silicon (arm64) and Intel (x86_64) VST3 packages.
+- **Version display, VST3, and Logic AU:** Help now shows the plugin version. GitHub Actions artifacts are labeled 1.06 and build separate Apple Silicon (arm64) and Intel (x86_64) packages for both VST3 and the Logic-compatible AU format.
 
 ## 1.05 更新 / What's new in 1.05
 

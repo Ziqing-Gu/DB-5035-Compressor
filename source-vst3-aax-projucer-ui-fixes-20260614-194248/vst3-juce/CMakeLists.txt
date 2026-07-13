@@ -6,6 +6,11 @@ option(DB5035_FETCH_JUCE "Download JUCE with CMake FetchContent" ON)
 option(DB5035_ENABLE_VINTAGE_UI "Build the optional hardware-inspired UI and its resources" ON)
 set(DB5035_JUCE_PATH "" CACHE PATH "Path to a local JUCE checkout when DB5035_FETCH_JUCE is OFF")
 
+set(DB5035_PLUGIN_FORMATS VST3 AAX Standalone CLAP)
+if(APPLE)
+    list(APPEND DB5035_PLUGIN_FORMATS AU)
+endif()
+
 if(DB5035_FETCH_JUCE)
     include(FetchContent)
     FetchContent_Declare(
@@ -34,7 +39,7 @@ juce_add_plugin(DB5035Compressor
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE CdxA
     PLUGIN_CODE Db3Q
-    FORMATS VST3 AAX Standalone CLAP
+    FORMATS ${DB5035_PLUGIN_FORMATS}
     AAX_CATEGORY AAX_ePlugInCategory_Dynamics
     PRODUCT_NAME "DB-5035 Qing Compressor"
 )
