@@ -41,7 +41,7 @@ public:
     DiodeBridgeCompressorMeters getMeters() const;
     DiodeBridgeCompressorMeters consumeMeterPeaks();
     void selectCompareSlot (int slotIndex);
-    void copyCompareAToB();
+    void copyActiveCompareSlotToOther();
     int getActiveCompareSlot() const { return activeCompareSlot; }
     int getVuMode() const { return vuMode; }
     void setVuMode (int mode);

@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   build-vst3:
-    name: ${{ matrix.name }}
+    name: VST3 ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -17,11 +17,11 @@ jobs:
           - name: Apple Silicon (arm64)
             runner: macos-14
             expected_arch: arm64
-            artifact_name: DB-5035-Qing-Compressor-1.06-macOS-Apple-Silicon
+            artifact_name: DB-5035-Qing-Compressor-1.07-macOS-Apple-Silicon
           - name: Intel (x86_64)
             runner: macos-15-intel
             expected_arch: x86_64
-            artifact_name: DB-5035-Qing-Compressor-1.06-macOS-Intel
+            artifact_name: DB-5035-Qing-Compressor-1.07-macOS-Intel
 
     steps:
       - name: Check out source
@@ -34,29 +34,19 @@ jobs:
           -DDB5035_FETCH_JUCE=ON
           -DDB5035_ENABLE_VINTAGE_UI=ON
           -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.expected_arch }}
 
-      - name: Build VST3 and AU
-        run: cmake --build build-macos --target DB5035Compressor_VST3 DB5035Compressor_AU --config Release --parallel 3
+      - name: Build VST3
+        run: cmake --build build-macos --target DB5035Compressor_VST3 --config Release --parallel 3
 
-      - name: Validate AU for Logic
-        shell: bash
-        run: |
-          killall -9 AudioComponentRegistrar || true
-          auval -v aufx Db3Q CdxA
-
-      - name: Verify architecture and package plugins
+      - name: Verify architecture and package VST3
         shell: bash
         run: |
           vst3='build-macos/DB5035Compressor_artefacts/Release/VST3/DB-5035 Qing Compressor.vst3'
-          au='build-macos/DB5035Compressor_artefacts/Release/AU/DB-5035 Qing Compressor.component'
           vst3_binary=$(find "$vst3/Contents/MacOS" -type f -print -quit)
-          au_binary=$(find "$au/Contents/MacOS" -type f -print -quit)
           test -n "$vst3_binary"
-          test -n "$au_binary"
           lipo -archs "$vst3_binary" | tr ' ' '\n' | grep -Fx '${{ matrix.expected_arch }}'
-          lipo -archs "$au_binary" | tr ' ' '\n' | grep -Fx '${{ matrix.expected_arch }}'
           ditto -c -k --keepParent "$vst3" '${{ matrix.artifact_name }}.vst3.zip'
-          ditto -c -k --keepParent "$au" '${{ matrix.artifact_name }}.component.zip'
 
       - name: Upload packaged VST3
         uses: actions/upload-artifact@v4
@@ -66,10 +56,48 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  build-au:
+    name: AU Universal 2 (arm64 + x86_64)
+    runs-on: macos-14
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure Universal 2
+        run: >
+          cmake -S source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce
+          -B build-macos-au
+          -DDB5035_FETCH_JUCE=ON
+          -DDB5035_ENABLE_VINTAGE_UI=ON
+          -DCMAKE_BUILD_TYPE=Release
+          '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'
+
+      - name: Build Universal 2 AU
+        run: cmake --build build-macos-au --target DB5035Compressor_AU --config Release --parallel 3
+
+      - name: Validate AU for Logic
+        shell: bash
+        run: |
+          killall -9 AudioComponentRegistrar || true
+          auval -v aufx Db3Q CdxA
+
+      - name: Verify both architectures and package AU
+        shell: bash
+        run: |
+          au='build-macos-au/DB5035Compressor_artefacts/Release/AU/DB-5035 Qing Compressor.component'
+          au_binary=$(find "$au/Contents/MacOS" -type f -print -quit)
+          test -n "$au_binary"
+          archs=$(lipo -archs "$au_binary")
+          printf '%s\n' "$archs"
+          printf '%s\n' "$archs" | tr ' ' '\n' | grep -Fx arm64
+          printf '%s\n' "$archs" | tr ' ' '\n' | grep -Fx x86_64
+          ditto -c -k --keepParent "$au" 'DB-5035-Qing-Compressor-1.07-macOS-Universal-AU.component.zip'
+
       - name: Upload packaged AU
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}-AU
-          path: ${{ matrix.artifact_name }}.component.zip
+          name: DB-5035-Qing-Compressor-1.07-macOS-Universal-AU
+          path: DB-5035-Qing-Compressor-1.07-macOS-Universal-AU.component.zip
           if-no-files-found: error
           retention-days: 7
