@@ -353,16 +353,23 @@ void DB5035AudioProcessor::selectCompareSlot (int slotIndex)
     applyCompareSnapshot (activeCompareSlot == 0 ? compareSlotA : compareSlotB);
 }
 
-void DB5035AudioProcessor::copyCompareAToB()
+void DB5035AudioProcessor::copyActiveCompareSlotToOther()
 {
     initialiseCompareSlotsFromCurrent();
+    captureActiveCompareSlot();
 
     if (activeCompareSlot == 0)
-        captureActiveCompareSlot();
-
-    compareSlotB = compareSlotA;
-    activeCompareSlot = 1;
-    applyCompareSnapshot (compareSlotB);
+    {
+        compareSlotB = compareSlotA;
+        activeCompareSlot = 1;
+        applyCompareSnapshot (compareSlotB);
+    }
+    else
+    {
+        compareSlotA = compareSlotB;
+        activeCompareSlot = 0;
+        applyCompareSnapshot (compareSlotA);
+    }
 }
 
 void DB5035AudioProcessor::initialiseCompareSlotsFromCurrent()

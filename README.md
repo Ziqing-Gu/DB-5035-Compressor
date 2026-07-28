@@ -1,5 +1,21 @@
 #DB-5035-Qing-Compressor
 
+## 1.07 更新 / What's new in 1.07
+
+### 中文
+
+- **双向 A/B 复制：** 复制按钮会根据当前槽位显示 `A>B` 或 `B>A`；既可以把 A 复制到 B，也可以把 B 复制回 A，并在复制后自动切换到目标槽位。
+- **当前槽位提示：** 正在使用的 A 或 B 按钮会以琥珀色高亮和粗体文字显示，Classic 与 Vintage 两种界面都能清楚辨认当前状态。
+- **Help 版本布局修正：** 版本号移到标题下方的独立区域，不再被右上角的 Close 按钮遮挡。
+- **跨平台发布包：** Windows 提供 x64 VST3；macOS 提供 Apple Silicon VST3、Intel VST3 与同时兼容两种架构的 Universal 2 AU。
+
+### English
+
+- **Bidirectional A/B copy:** The copy button follows the active slot and displays `A>B` or `B>A`. Either slot can be copied to the other, then the destination becomes active automatically.
+- **Clear active-slot feedback:** The active A or B button uses an amber highlight and bold text in both the Classic and Vintage interfaces.
+- **Help version layout fix:** The version number now has its own line below the title and can no longer be covered by the Close button.
+- **Cross-platform packages:** Windows includes an x64 VST3. macOS includes native Apple Silicon and Intel VST3 builds plus a Universal 2 AU compatible with both architectures.
+
 ## 1.06 更新 / What's new in 1.06
 
 ### 中文

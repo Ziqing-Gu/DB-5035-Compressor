@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="DB503Q" name="DB-5035 Qing Compressor" projectType="audioplug"
-              version="1.06" bundleIdentifier="com.codexaudio.db5035qingcompressor"
+              version="1.07" bundleIdentifier="com.codexaudio.db5035qingcompressor"
               companyName="Codex Audio" companyWebsite="" companyEmail=""
               pluginFormats="buildVST3,buildAU,buildAAX,buildStandalone" pluginName="DB-5035 Qing Compressor"
               pluginDesc="Diode bridge compressor inspired by a 5035 dynamics module"
