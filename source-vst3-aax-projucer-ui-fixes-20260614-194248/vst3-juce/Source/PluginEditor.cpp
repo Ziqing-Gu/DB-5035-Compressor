@@ -362,7 +362,7 @@ void DB5035AudioProcessorEditor::HelpOverlay::HelpContent::paint (juce::Graphics
 
     drawHelpLine (g, content, "ABOUT", 12.5f, cream, true, 18);
     drawHelpLine (g, content, utf8 (u8"DB-5035 Qing Compressor 是一个二极管桥压缩风格的动态处理器。"), 12.4f, text, false, 19);
-    drawHelpLine (g, content, utf8 (u8"它是由混音师顾子青根据他的工作室里的真实硬件，使用 Codex 制作完成的插件。"), 12.4f, text, false, 19);
+    drawHelpLine (g, content, utf8 (u8"它是由混音师顾子青根据他的工作室里的真实硬件，使用 Qing Audio 制作完成的插件。"), 12.4f, text, false, 19);
     drawHelpLine (g, content, utf8 (u8"动态响应参考了经典 5035 风格压缩模块，并经过正弦波动态测试与听感校准。"), 12.4f, text, false, 19);
     drawHelpLine (g, content, utf8 (u8"它的重点不是透明数字压缩，而是模拟硬件在不同 Ratio、Timing、Fast 开关状态下的动态包络。"), 12.4f, text, false, 19);
     drawHelpLine (g, content, utf8 (u8"包括音头、释放曲线、阈值自适应，以及轻微的模拟频响滚降。"), 12.4f, text, false, 19);

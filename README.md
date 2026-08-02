@@ -1,5 +1,17 @@
 #DB-5035-Qing-Compressor
 
+## 1.08 更新 / What's new in 1.08
+
+### 中文
+
+- **品牌信息更新：** 插件厂商名称由 `Codex Audio` 更新为 `Qing Audio`，Help 和项目元数据同步调整。
+- **动态处理器分类：** VST3 元数据现在声明 `Fx / Dynamics`，使 Cubase、Nuendo 等宿主能够把 DB-5035 归入 Dynamics，而不是 Other。
+
+### English
+
+- **Brand metadata update:** The plug-in manufacturer is now `Qing Audio`, with matching Help text and project metadata.
+- **Dynamics classification:** The VST3 metadata now declares `Fx / Dynamics`, allowing hosts such as Cubase and Nuendo to list DB-5035 under Dynamics instead of Other.
+
 ## 1.07 更新 / What's new in 1.07
 
 ### 中文

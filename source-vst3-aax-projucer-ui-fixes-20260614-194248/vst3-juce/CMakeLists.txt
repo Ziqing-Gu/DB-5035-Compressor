@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(DB5035Compressor VERSION 1.07)
+project(DB5035Compressor VERSION 1.08)
 
 option(DB5035_FETCH_JUCE "Download JUCE with CMake FetchContent" ON)
 option(DB5035_ENABLE_VINTAGE_UI "Build the optional hardware-inspired UI and its resources" ON)
@@ -29,7 +29,7 @@ endif()
 add_subdirectory(../clap-juce-extensions clap-juce-extensions)
 
 juce_add_plugin(DB5035Compressor
-    COMPANY_NAME "Codex Audio"
+    COMPANY_NAME "Qing Audio"
     BUNDLE_ID "com.codexaudio.db5035qingcompressor"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
@@ -40,6 +40,7 @@ juce_add_plugin(DB5035Compressor
     PLUGIN_MANUFACTURER_CODE CdxA
     PLUGIN_CODE Db3Q
     FORMATS ${DB5035_PLUGIN_FORMATS}
+    VST3_CATEGORIES Fx Dynamics
     AAX_CATEGORY AAX_ePlugInCategory_Dynamics
     PRODUCT_NAME "DB-5035 Qing Compressor"
 )

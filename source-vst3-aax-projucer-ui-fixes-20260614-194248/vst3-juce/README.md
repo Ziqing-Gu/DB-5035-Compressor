@@ -1,5 +1,11 @@
 # DB-5035 Compressor VST3
 
+Current plugin version: 1.08
+
+Manufacturer: Qing Audio
+
+VST3 category: Fx / Dynamics
+
 This is a JUCE/CMake VST3 project for a diode-bridge-inspired compressor.
 
 It is not affiliated with, endorsed by, or an exact model of Shelford, Neve, or any related trademarked product.
