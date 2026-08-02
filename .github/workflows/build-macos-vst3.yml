@@ -17,11 +17,11 @@ jobs:
           - name: Apple Silicon (arm64)
             runner: macos-14
             expected_arch: arm64
-            artifact_name: DB-5035-Qing-Compressor-1.07-macOS-Apple-Silicon
+            artifact_name: DB-5035-Qing-Compressor-1.08-macOS-Apple-Silicon
           - name: Intel (x86_64)
             runner: macos-15-intel
             expected_arch: x86_64
-            artifact_name: DB-5035-Qing-Compressor-1.07-macOS-Intel
+            artifact_name: DB-5035-Qing-Compressor-1.08-macOS-Intel
 
     steps:
       - name: Check out source
@@ -92,12 +92,12 @@ jobs:
           printf '%s\n' "$archs"
           printf '%s\n' "$archs" | tr ' ' '\n' | grep -Fx arm64
           printf '%s\n' "$archs" | tr ' ' '\n' | grep -Fx x86_64
-          ditto -c -k --keepParent "$au" 'DB-5035-Qing-Compressor-1.07-macOS-Universal-AU.component.zip'
+          ditto -c -k --keepParent "$au" 'DB-5035-Qing-Compressor-1.08-macOS-Universal-AU.component.zip'
 
       - name: Upload packaged AU
         uses: actions/upload-artifact@v4
         with:
-          name: DB-5035-Qing-Compressor-1.07-macOS-Universal-AU
-          path: DB-5035-Qing-Compressor-1.07-macOS-Universal-AU.component.zip
+          name: DB-5035-Qing-Compressor-1.08-macOS-Universal-AU
+          path: DB-5035-Qing-Compressor-1.08-macOS-Universal-AU.component.zip
           if-no-files-found: error
           retention-days: 7
