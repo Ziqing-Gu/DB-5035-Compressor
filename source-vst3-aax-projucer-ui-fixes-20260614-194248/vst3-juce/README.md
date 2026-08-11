@@ -1,6 +1,20 @@
 # DB-5035 Compressor VST3
 
-Current plugin version: 1.08
+Current plugin version: 1.09
+
+## Version 1.09
+
+- Added a host-visible bypass parameter so DAWs can use the plug-in's own
+  latency-matched bypass path.
+- The bypass path now applies a pure delay equal to the currently reported
+  oversampling latency. This keeps DAW bypass aligned in parallel-processing
+  workflows and prevents comb filtering caused by a timing jump.
+- The latency-matched dry path is continuously primed during normal processing,
+  avoiding a silent gap when bypass is engaged.
+- Reset all detector/envelope history when `COMP IN` is disabled, preventing
+  stale gain reduction when compression is re-enabled.
+- The Help overlay reads `JucePlugin_VersionString`, so CMake and Projucer builds
+  now display `Version 1.09` to the user.
 
 Manufacturer: Qing Audio
 

@@ -100,6 +100,8 @@ public:
             meterGainReductionDb = 0.0f;
             outputPeak = 0.0f;
             heldGainReductionDb = 0.0f;
+            linkedEnvelope = 0.0f;
+            linkedSlowPreviewEnvelope = 0.0f;
             linkedTransientPass = 0.0f;
             linkedPeakRestore = 0.0f;
             linkedPeakRestoreLockoutSamples = 0;
@@ -112,6 +114,8 @@ public:
             linkedAttackDipSample = -1;
             linkedAttackDipArmed = 1;
             std::fill (channelPeakRestore.begin(), channelPeakRestore.end(), 0.0f);
+            std::fill (channelEnvelopes.begin(), channelEnvelopes.end(), 0.0f);
+            std::fill (channelSlowPreviewEnvelopes.begin(), channelSlowPreviewEnvelopes.end(), 0.0f);
             std::fill (channelPeakRestoreLockoutSamples.begin(), channelPeakRestoreLockoutSamples.end(), 0);
             std::fill (channelTransientPass.begin(), channelTransientPass.end(), 0.0f);
             std::fill (channelReleaseMemoryDb.begin(), channelReleaseMemoryDb.end(), 0.0f);
@@ -122,6 +126,8 @@ public:
             std::fill (channelAttackDipSlowLevel.begin(), channelAttackDipSlowLevel.end(), 0.0f);
             std::fill (channelAttackDipSample.begin(), channelAttackDipSample.end(), -1);
             std::fill (channelAttackDipArmed.begin(), channelAttackDipArmed.end(), 1);
+            std::fill (sidechainState.begin(), sidechainState.end(), 0.0f);
+            std::fill (lastSidechain.begin(), lastSidechain.end(), 0.0f);
             std::fill (outputBandwidthState.begin(), outputBandwidthState.end(), 0.0f);
             return;
         }
