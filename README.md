@@ -1,5 +1,24 @@
 #DB-5035-Qing-Compressor
 
+> 开发过程与 AI 交接记录：请先阅读 [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md)。后续每次修改代码后都必须追加本次开发经过，不得覆盖旧记录。
+
+
+## 1.09 更新 / What's new in 1.09
+
+### 中文
+
+- **修复过采样下的 DAW Bypass 时间偏移：** 新增由宿主识别的 Bypass 参数，并让旁通信号保持与当前过采样模式完全相同的已上报延迟。用于平行处理时，按下 DAW 的 Bypass 不再因为时间位置跳变而产生梳状滤波或相位失真。
+- **旁通切换不中断：** 延迟匹配的干声通道在插件正常工作时持续运行，按下 Bypass 时不会先出现一小段静音。
+- **压缩状态复位：** 关闭 `COMP IN` 时会完整清除包络与 Sidechain 检测历史，重新开启后不再继承关闭前的旧压缩状态。
+- **版本同步：** CMake、Projucer 和 Help 用户界面均已更新为 `Version 1.09`。
+
+### English
+
+- **Fixed DAW bypass timing with oversampling:** Added a host-recognised bypass parameter and a dry path delayed by exactly the latency reported for the current oversampling mode. DAW bypass no longer jumps in time and causes comb filtering in parallel-processing workflows.
+- **Seamless bypass transition:** The latency-matched dry path is kept primed during normal processing, preventing a silent gap when bypass is engaged.
+- **Complete compressor-state reset:** Disabling `COMP IN` now clears envelope and sidechain detector history so stale gain reduction cannot return when compression is re-enabled.
+- **Synchronized version display:** CMake, Projucer, and the Help interface now report `Version 1.09`.
+
 ## 1.08 更新 / What's new in 1.08
 
 ### 中文

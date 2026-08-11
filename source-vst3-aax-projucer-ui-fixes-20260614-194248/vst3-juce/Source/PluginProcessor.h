@@ -17,6 +17,8 @@ public:
     void releaseResources() override;
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
     void processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+    void processBlockBypassed (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+    juce::AudioProcessorParameter* getBypassParameter() const override;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
@@ -59,6 +61,12 @@ private:
     int getOversamplingFactor() const;
     void prepareOversampling (int oversamplingIndex, int samplesPerBlock, int mainChannels, int sidechainChannels);
     void processOversampledBlock (juce::AudioBuffer<float>& mainBuffer, const juce::AudioBuffer<float>* sidechain);
+    void processBlockInternal (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, bool forceHostBypass);
+    bool readHostBypass() const;
+    void prepareLatencyMatchedBypass (int maximumChannels, int maximumBlockSize);
+    void processLatencyMatchedDry (juce::AudioBuffer<float>& buffer, bool writeDelayedSignalToOutput);
+    void publishBypassMeters (float inputDb, float outputDb);
+    static float measurePeakDb (const juce::AudioBuffer<float>& buffer);
     void initialiseCompareSlotsFromCurrent();
     void captureActiveCompareSlot();
     CompareSnapshot captureCompareSnapshot() const;
@@ -77,11 +85,15 @@ private:
     std::unique_ptr<juce::dsp::Oversampling<float>> mainOversampler;
     juce::AudioBuffer<float> oversampledMainBuffer;
     juce::AudioBuffer<float> oversampledSidechainBuffer;
+    juce::AudioBuffer<float> bypassDelayBuffer;
+    int bypassDelayWritePosition = 0;
+    int bypassDelaySamples = 0;
     double preparedSampleRate = 44100.0;
     int preparedBlockSize = 0;
     int preparedMainChannels = 0;
     int preparedSidechainChannels = 0;
     int activeOversamplingIndex = 0;
+    bool wasHostBypassed = false;
     std::atomic<float> inputMeterDb { -80.0f };
     std::atomic<float> outputMeterDb { -80.0f };
     std::atomic<float> gainReductionDb { 0.0f };

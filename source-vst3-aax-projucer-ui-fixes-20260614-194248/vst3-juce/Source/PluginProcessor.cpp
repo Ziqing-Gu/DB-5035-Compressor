@@ -3,6 +3,7 @@
 
 namespace ParamID
 {
+    constexpr auto hostBypass = "hostBypass";
     constexpr auto compIn = "compIn";
     constexpr auto threshold = "threshold";
     constexpr auto ratio = "ratio";
@@ -149,6 +150,10 @@ void DB5035AudioProcessor::releaseResources()
     compressor.reset();
     if (mainOversampler != nullptr)
         mainOversampler->reset();
+
+    bypassDelayBuffer.clear();
+    bypassDelayWritePosition = 0;
+    wasHostBypassed = false;
 }
 
 bool DB5035AudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -177,6 +182,23 @@ bool DB5035AudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) c
 
 void DB5035AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    processBlockInternal (buffer, midiMessages, false);
+}
+
+void DB5035AudioProcessor::processBlockBypassed (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    processBlockInternal (buffer, midiMessages, true);
+}
+
+juce::AudioProcessorParameter* DB5035AudioProcessor::getBypassParameter() const
+{
+    return parameters.getParameter (ParamID::hostBypass);
+}
+
+void DB5035AudioProcessor::processBlockInternal (juce::AudioBuffer<float>& buffer,
+                                                 juce::MidiBuffer& midiMessages,
+                                                 bool forceHostBypass)
+{
     juce::ignoreUnused (midiMessages);
     juce::ScopedNoDenormals noDenormals;
 
@@ -192,7 +214,6 @@ void DB5035AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     const auto* sidechain = useSidechain ? &sidechainBuffer : nullptr;
 
     const auto currentParameters = readParameters();
-    compressor.setParameters (currentParameters);
 
     const auto requestedOversamplingIndex = readOversamplingIndex();
     const auto sidechainChannels = sidechain != nullptr ? sidechain->getNumChannels() : mainBuffer.getNumChannels();
@@ -208,6 +229,28 @@ void DB5035AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         compressor.setParameters (currentParameters);
     }
 
+    const auto hostBypassed = forceHostBypass || readHostBypass();
+    const auto bypassInputDb = hostBypassed ? measurePeakDb (mainBuffer) : -80.0f;
+
+    // Keep the dry latency line primed during normal processing. When the host
+    // bypasses the plug-in, render that delayed dry signal instead. This keeps
+    // the bypassed path at exactly the latency reported to the DAW and avoids
+    // the timing jump/comb filtering that otherwise occurs in parallel chains.
+    processLatencyMatchedDry (mainBuffer, hostBypassed);
+
+    if (hostBypassed)
+    {
+        if (! wasHostBypassed)
+            compressor.reset();
+
+        wasHostBypassed = true;
+        publishBypassMeters (bypassInputDb, measurePeakDb (mainBuffer));
+        return;
+    }
+
+    wasHostBypassed = false;
+    compressor.setParameters (currentParameters);
+
     const auto* activeSidechain = currentParameters.externalSidechain ? sidechain : nullptr;
     if (getOversamplingFactor() <= 1)
         compressor.process (mainBuffer, activeSidechain);
@@ -221,6 +264,35 @@ void DB5035AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     accumulateMeterPeak (pendingInputMeterPeakDb, meters.inputDb);
     accumulateMeterPeak (pendingOutputMeterPeakDb, meters.outputDb);
     accumulateMeterPeak (pendingGainReductionPeakDb, meters.gainReductionDb);
+}
+
+bool DB5035AudioProcessor::readHostBypass() const
+{
+    if (auto* value = parameters.getRawParameterValue (ParamID::hostBypass))
+        return value->load (std::memory_order_relaxed) >= 0.5f;
+
+    jassertfalse;
+    return false;
+}
+
+float DB5035AudioProcessor::measurePeakDb (const juce::AudioBuffer<float>& buffer)
+{
+    auto peak = 0.0f;
+
+    for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
+        peak = juce::jmax (peak, buffer.getMagnitude (channel, 0, buffer.getNumSamples()));
+
+    return juce::Decibels::gainToDecibels (juce::jmax (peak, 0.000001f), -80.0f);
+}
+
+void DB5035AudioProcessor::publishBypassMeters (float inputDb, float outputDb)
+{
+    inputMeterDb.store (inputDb, std::memory_order_relaxed);
+    outputMeterDb.store (outputDb, std::memory_order_relaxed);
+    gainReductionDb.store (0.0f, std::memory_order_relaxed);
+    accumulateMeterPeak (pendingInputMeterPeakDb, inputDb);
+    accumulateMeterPeak (pendingOutputMeterPeakDb, outputDb);
+    pendingGainReductionPeakDb.store (0.0f, std::memory_order_relaxed);
 }
 
 juce::AudioProcessorEditor* DB5035AudioProcessor::createEditor()
@@ -521,6 +593,11 @@ DB5035AudioProcessor::APVTS::ParameterLayout DB5035AudioProcessor::createParamet
         juce::ParameterID { ParamID::oversampling, 1 }, "Oversampling",
         juce::StringArray { "1x", "2x", "4x", "8x" }, 0));
 
+    // Keep the host bypass parameter last so the indices of all 1.08
+    // parameters remain unchanged for existing projects and automation.
+    params.push_back (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { ParamID::hostBypass, 1 }, "Bypass", false));
+
     return { params.begin(), params.end() };
 }
 
@@ -602,6 +679,46 @@ void DB5035AudioProcessor::prepareOversampling (int oversamplingIndex,
     }
 
     compressor.prepare (preparedSampleRate * (double) getOversamplingFactor(), preparedMainChannels);
+    prepareLatencyMatchedBypass (preparedMainChannels, preparedBlockSize);
+}
+
+void DB5035AudioProcessor::prepareLatencyMatchedBypass (int maximumChannels, int maximumBlockSize)
+{
+    bypassDelaySamples = juce::jmax (0, getLatencySamples());
+    const auto capacity = juce::jmax (1, bypassDelaySamples + juce::jmax (1, maximumBlockSize) + 1);
+    bypassDelayBuffer.setSize (juce::jmax (1, maximumChannels), capacity, false, false, true);
+    bypassDelayBuffer.clear();
+    bypassDelayWritePosition = 0;
+}
+
+void DB5035AudioProcessor::processLatencyMatchedDry (juce::AudioBuffer<float>& buffer,
+                                                     bool writeDelayedSignalToOutput)
+{
+    if (bypassDelaySamples <= 0)
+        return;
+
+    const auto capacity = bypassDelayBuffer.getNumSamples();
+    const auto channels = juce::jmin (buffer.getNumChannels(), bypassDelayBuffer.getNumChannels());
+
+    for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+    {
+        auto readPosition = bypassDelayWritePosition - bypassDelaySamples;
+        if (readPosition < 0)
+            readPosition += capacity;
+
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            const auto drySample = buffer.getSample (channel, sample);
+            const auto delayedDrySample = bypassDelayBuffer.getSample (channel, readPosition);
+            bypassDelayBuffer.setSample (channel, bypassDelayWritePosition, drySample);
+
+            if (writeDelayedSignalToOutput)
+                buffer.setSample (channel, sample, delayedDrySample);
+        }
+
+        if (++bypassDelayWritePosition >= capacity)
+            bypassDelayWritePosition = 0;
+    }
 }
 
 void DB5035AudioProcessor::processOversampledBlock (juce::AudioBuffer<float>& mainBuffer,
