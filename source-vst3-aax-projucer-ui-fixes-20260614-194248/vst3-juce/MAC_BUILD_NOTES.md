@@ -1,4 +1,4 @@
-# DB-5035 Qing Compressor Mac Build Notes
+# DB-5035 Qing Compressor 1.1.0 — Mac Build Notes
 
 This project includes both CMake and Projucer setup.
 
@@ -12,9 +12,7 @@ This project includes both CMake and Projucer setup.
 6. Open the generated Xcode project.
 7. Build the `DB-5035 Qing Compressor - VST3` target in Release.
 
-## AAX note
-
-The project file also enables AAX. Building/loading AAX may require the AAX SDK and Avid/PACE signing workflow. Unsigned AAX builds may not load in regular Pro Tools.
+The project retains its official VST3, AU, AAX, Standalone and CLAP format configuration.
 
 ## CMake workflow
 
@@ -25,4 +23,4 @@ cmake -S . -B build-mac -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 cmake --build build-mac --config Release
 ```
 
-The CMake project is the version used for the current Windows VST3/AAX builds.
+The VST3 output is `DB-5035 Qing Compressor.vst3` and keeps the official identity used by version 1.09.

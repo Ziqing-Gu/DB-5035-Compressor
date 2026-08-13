@@ -1117,9 +1117,14 @@ private:
 
     float getTransientPassAmount (float ratio) const
     {
+        juce::ignoreUnused (ratio);
+
         switch (parameters.timingIndex)
         {
-            case 0:  return 0.98f;
+            // 1.1.0: the original 0.98 value could switch almost completely
+            // from compressed audio to dry audio in a single sample.  Keep the
+            // transient-preserving behaviour, but limit the gain discontinuity.
+            case 0:  return 0.65f;
             case 1:  return 0.0f;
             case 2:  return 0.0f;
             case 3:  return 0.0f;
@@ -1131,9 +1136,11 @@ private:
 
     float getTransientPassLimit (float ratio) const
     {
+        juce::ignoreUnused (ratio);
+
         switch (parameters.timingIndex)
         {
-            case 0:  return 0.98f;
+            case 0:  return 0.65f;
             case 1:  return 0.0f;
             case 2:  return 0.0f;
             case 3:  return 0.0f;
@@ -1147,7 +1154,7 @@ private:
     {
         switch (parameters.timingIndex)
         {
-            case 0:  return 0.00065f;
+            case 0:  return 0.0010f;
             case 1:  return 0.00085f;
             case 2:  return 0.0011f;
             case 3:  return 0.00135f;
@@ -1522,16 +1529,29 @@ private:
             return 0.0f;
         }
 
-        const auto decayCoeff = std::exp (-1.0f / (float) (sampleRate * getTransientPassDecaySeconds()));
-        currentPass *= decayCoeff;
+        auto targetPass = 0.0f;
 
         if (detector > previousEnvelope && gainReductionDb < 9.0f)
         {
             const auto rise = (detector - previousEnvelope) / juce::jmax (detector, 0.000001f);
 
             if (rise > 0.08f)
-                currentPass = juce::jmax (currentPass, juce::jlimit (0.0f, passLimit, rise * passAmount));
+                targetPass = juce::jlimit (0.0f, passLimit, rise * passAmount);
         }
+
+        // 1.1.0: slew the transient dry/wet crossfade in both directions.
+        // This removes the one-sample jump that produced clicks, rasp and HF
+        // splatter on unusually large vocal attacks while preserving the
+        // intended short transient pass.
+        constexpr auto attackSeconds = 0.00020f;
+        const auto releaseSeconds = getTransientPassDecaySeconds();
+        const auto attackCoeff = std::exp (-1.0f / (float) (sampleRate * attackSeconds));
+        const auto releaseCoeff = std::exp (-1.0f / (float) (sampleRate * releaseSeconds));
+        const auto coeff = targetPass > currentPass ? attackCoeff : releaseCoeff;
+        currentPass = coeff * currentPass + (1.0f - coeff) * targetPass;
+
+        if (currentPass < 0.000001f)
+            currentPass = 0.0f;
 
         return currentPass;
     }
@@ -1606,7 +1626,7 @@ private:
         fastLevel = fastCoeff * fastLevel + (1.0f - fastCoeff) * detector;
         slowLevel = slowCoeff * slowLevel + (1.0f - slowCoeff) * detector;
 
-        if (slowLevel <= 0.000001f || result.gainReductionDb <= 0.0f)
+        if (slowLevel <= 0.000001f)
         {
             releaseMemoryDb = 0.0f;
             releaseEntryArmed = 1;
@@ -1614,32 +1634,44 @@ private:
         }
 
         const auto isCharging = fastLevel >= slowLevel * 0.82f;
+        auto targetMemoryDb = 0.0f;
 
         if (isCharging)
             releaseEntryArmed = 1;
 
-        if (releaseEntryArmed != 0 && slowLevel > 0.000001f && fastLevel < slowLevel * 0.46f)
+        if (releaseEntryArmed != 0
+            && result.gainReductionDb > 0.0f
+            && fastLevel < slowLevel * 0.46f)
+            releaseEntryArmed = 0;
+
+        if (releaseEntryArmed == 0 && result.gainReductionDb > 0.0f)
         {
             const auto ratioNormalised = juce::jlimit (0.0f, 1.0f, (ratio - 1.5f) / (8.0f - 1.5f));
             const auto depth = juce::jlimit (0.0f, 1.0f, result.gainReductionDb / 10.0f);
             const auto entryDrop = juce::jlimit (0.0f, 1.0f, (slowLevel - fastLevel) / slowLevel);
             const auto memoryAmount = 0.26f + ratioNormalised * 0.04f;
-            const auto targetMemoryDb = result.gainReductionDb
-                                      * memoryAmount
-                                      * std::pow (entryDrop, 0.72f)
-                                      * (0.58f + depth * 0.42f)
-                                      * getFastTimingThreeToOneReleaseMemoryScale (ratio);
-
-            releaseMemoryDb = juce::jmax (releaseMemoryDb, targetMemoryDb);
-            releaseEntryArmed = 0;
+            targetMemoryDb = result.gainReductionDb
+                           * memoryAmount
+                           * std::pow (entryDrop, 0.72f)
+                           * (0.58f + depth * 0.42f)
+                           * getFastTimingThreeToOneReleaseMemoryScale (ratio);
         }
 
-        const auto extraGainReductionDb = releaseMemoryDb;
+        // 1.1.0: ramp into release memory rather than adding its full amount
+        // in one sample. The original slow decay is retained.
+        constexpr auto entrySeconds = 0.0020f;
+        const auto entryCoeff = std::exp (-1.0f / (float) (sampleRate * entrySeconds));
         const auto decayCoeff = std::exp (-1.0f / (float) (sampleRate * getReleaseMemoryDecaySeconds()));
-        releaseMemoryDb *= decayCoeff;
+
+        if (targetMemoryDb > releaseMemoryDb)
+            releaseMemoryDb = entryCoeff * releaseMemoryDb + (1.0f - entryCoeff) * targetMemoryDb;
+        else
+            releaseMemoryDb *= decayCoeff;
 
         if (releaseMemoryDb < 0.001f)
             releaseMemoryDb = 0.0f;
+
+        const auto extraGainReductionDb = releaseMemoryDb;
 
         result.gain *= juce::Decibels::decibelsToGain (-extraGainReductionDb);
         result.gainReductionDb += extraGainReductionDb;

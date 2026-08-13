@@ -1,5 +1,7 @@
 # Next Session Note
 
+> Historical calibration note only. For the current official 1.1.0 state, use `../../DEVELOPMENT_HISTORY_1.1.0.md`.
+
 Current stopping point:
 - Timing: Med
 - Ratio: 1.5:1
