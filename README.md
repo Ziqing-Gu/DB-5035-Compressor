@@ -1,7 +1,38 @@
-#DB-5035-Qing-Compressor
+﻿# DB-5035 Qing Compressor
 
-> 开发过程与 AI 交接记录：请先阅读 [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md)。后续每次修改代码后都必须追加本次开发经过，不得覆盖旧记录。
+> 开发过程与 AI 交接记录：请先阅读 [DEVELOPMENT_HISTORY_1.1.0.md](DEVELOPMENT_HISTORY_1.1.0.md)。后续每次修改代码后都必须追加本次开发经过，不得覆盖旧记录。
 
+当前正式版本：`1.1.0`
+
+## 1.1.0 更新 / What's new in 1.1.0
+
+### 中文
+
+- **修复 Fast Timing 大瞬态异响：** 解决部分 Vocal 大瞬态压缩瞬间出现的轻微爆裂、短促沙哑、“啪”声、高频毛刺和瞬间过载感。
+- **Transient Pass 平滑：** 最大放行量由 `0.98` 调整为 `0.65`；加入约 `0.20 ms` 的平滑进入与约 `1.0 ms` 的平滑退出，避免单采样点内发生接近全量的干湿切换。
+- **Release Memory 平滑：** 释放记忆改为约 `2.0 ms` 平滑进入，保留原有程序相关慢速衰减。
+- **硬件校准保持不变：** 其余 Ratio、Timing、压缩曲线、Dynamic Sag、染色和过采样算法没有改动。
+- **正式升级：** 恢复正式插件名称、Plugin Code 和 Bundle ID，1.1.0 会作为 1.09 的直接升级版被宿主识别；Help 同步显示 `Version 1.1.0`。
+
+### English
+
+- **Fixed Fast Timing transient artefacts:** Removes occasional clicks, short rasp, HF splatter and overload-like distortion on unusually large vocal attacks.
+- **Smoothed Transient Pass:** Reduced its maximum from `0.98` to `0.65`, with an approximately `0.20 ms` rise and `1.0 ms` fall to prevent near-total dry/wet switching within one sample.
+- **Smoothed Release Memory:** Added an approximately `2.0 ms` entry ramp while retaining the original program-dependent slow decay.
+- **Calibration retained:** Other Ratio, Timing, compression-curve, Dynamic Sag, colour and oversampling behaviour is unchanged.
+- **Official upgrade identity:** The original product name, plug-in code and bundle ID are restored so 1.1.0 replaces 1.09 normally. Help reports `Version 1.1.0`.
+
+## Windows x64 构建
+
+在安装了 Visual Studio 2022 Build Tools（含 C++ 工作负载）的 Windows 电脑上，以
+PowerShell 运行：
+
+```powershell
+.\source-vst3-aax-projucer-ui-fixes-20260614-194248\build-vst3.ps1
+```
+
+脚本会构建 `DB-5035 Qing Compressor.vst3`，并在 `dist` 目录生成带时间戳
+的 zip 包。仓库也包含可手动运行的 Windows GitHub Actions 工作流。
 
 ## 1.09 更新 / What's new in 1.09
 
@@ -17,7 +48,7 @@
 - **Fixed DAW bypass timing with oversampling:** Added a host-recognised bypass parameter and a dry path delayed by exactly the latency reported for the current oversampling mode. DAW bypass no longer jumps in time and causes comb filtering in parallel-processing workflows.
 - **Seamless bypass transition:** The latency-matched dry path is kept primed during normal processing, preventing a silent gap when bypass is engaged.
 - **Complete compressor-state reset:** Disabling `COMP IN` now clears envelope and sidechain detector history so stale gain reduction cannot return when compression is re-enabled.
-- **Synchronized version display:** CMake, Projucer, and the Help interface now report `Version 1.09`.
+- **Synchronized version display:** CMake, Projucer, and the Help interface report `Version 1.09`.
 
 ## 1.08 更新 / What's new in 1.08
 
@@ -234,3 +265,4 @@ Enjoy!
 
 视频介绍(Vedio)：
 https://www.bilibili.com/video/BV1hfJL62E7E/?spm_id_from=333.1387.homepage.video_card.click&vd_source=755a32d6ff272ad1739298868f2881c9
+

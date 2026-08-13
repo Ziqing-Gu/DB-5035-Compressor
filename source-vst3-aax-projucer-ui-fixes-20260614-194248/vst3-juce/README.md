@@ -1,6 +1,18 @@
-# DB-5035 Compressor VST3
+# DB-5035 Qing Compressor
 
-Current plugin version: 1.09
+Current plugin version: 1.1.0
+
+Version 1.1.0 promotes the successfully verified Test C DSP correction to the
+official plug-in identity. It is a direct update for version 1.09.
+
+Version 1.1.0 changes:
+
+- slew-limited Fast Timing Transient Pass (0.20 ms rise / 1.0 ms fall);
+- maximum Transient Pass reduced from 0.98 to 0.65;
+- Release Memory entry smoothed over 2.0 ms;
+- all other compressor calibration remains unchanged.
+
+The Help overlay displays `Version 1.1.0`.
 
 ## Version 1.09
 
@@ -44,7 +56,7 @@ cmake --build build --config Release
 The VST3 target is copied after build by JUCE. The build output is normally under:
 
 ```text
-build/DB5035Compressor_artefacts/Release/VST3/DB-5035 Compressor.vst3
+build/DB5035Compressor_artefacts/Release/VST3/DB-5035 Qing Compressor.vst3
 ```
 
 To use a local JUCE checkout instead of downloading JUCE:

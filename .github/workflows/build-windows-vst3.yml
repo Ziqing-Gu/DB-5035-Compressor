@@ -1,0 +1,45 @@
+name: Build Windows VST3 1.1.0
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-vst3:
+    name: DB-5035 VST3 Windows x64
+    runs-on: windows-2022
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure
+        shell: pwsh
+        run: >
+          cmake -S source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce
+          -B build-windows
+          -G "Visual Studio 17 2022"
+          -A x64
+          -DDB5035_FETCH_JUCE=ON
+          -DDB5035_ENABLE_VINTAGE_UI=ON
+
+      - name: Build VST3
+        shell: pwsh
+        run: cmake --build build-windows --target DB5035Compressor_VST3 --config Release --parallel 3
+
+      - name: Verify and package VST3
+        shell: pwsh
+        run: |
+          $vst3 = "build-windows/DB5035Compressor_artefacts/Release/VST3/DB-5035 Qing Compressor.vst3"
+          if (-not (Test-Path $vst3)) { throw "Missing DB-5035 VST3: $vst3" }
+          Compress-Archive -Path $vst3 -DestinationPath "DB-5035-Qing-Compressor-1.1.0-Windows-x64.zip"
+
+      - name: Upload packaged VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: DB-5035-Qing-Compressor-1.1.0-Windows-x64
+          path: DB-5035-Qing-Compressor-1.1.0-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 7

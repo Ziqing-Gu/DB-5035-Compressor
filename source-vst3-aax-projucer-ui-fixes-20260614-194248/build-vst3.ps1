@@ -33,7 +33,7 @@ if (Test-Path (Join-Path $downloadedJuce "CMakeLists.txt")) {
     $configure = "`"$vcvars`" && `"$cmake`" -S . -B `"$buildDir`" -G `"Visual Studio 17 2022`" -A x64"
 }
 
-$build = "`"$vcvars`" && `"$cmake`" --build `"$buildDir`" --config Release"
+$build = "`"$vcvars`" && `"$cmake`" --build `"$buildDir`" --target DB5035Compressor_VST3 --config Release"
 
 cmd.exe /d /c $configure
 if ($LASTEXITCODE -ne 0) {
@@ -41,4 +41,23 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 cmd.exe /d /c $build
-exit $LASTEXITCODE
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
+
+$artifact = Join-Path $buildDir "DB5035Compressor_artefacts\Release\VST3\DB-5035 Qing Compressor.vst3"
+
+if (-not (Test-Path $artifact)) {
+    throw "DB-5035 Qing Compressor VST3 was built, but the expected bundle was not found at $artifact"
+}
+
+$distDir = Join-Path $PSScriptRoot "dist"
+$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$package = Join-Path $distDir "DB-5035-Qing-Compressor-1.1.0-Windows-x64-$stamp.zip"
+New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+Compress-Archive -Path $artifact -DestinationPath $package
+
+Write-Host ""
+Write-Host "VST3 bundle:        $artifact" -ForegroundColor Green
+Write-Host "Portable package:     $package" -ForegroundColor Green
+exit 0
