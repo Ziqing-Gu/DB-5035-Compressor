@@ -3,7 +3,7 @@
 日期：2026-08-26
 基线：GitHub `origin/main` / `e8e2e21`（正式版 1.1.0）
 工作分支：`agent/match-gain-candidate`
-工作区：`D:\Codex\Workspaces\DB5035-MatchGain-Candidate`
+工作区：本地独立 Git 工作区（公开记录不保存本机绝对路径）
 
 ## 本轮目标
 

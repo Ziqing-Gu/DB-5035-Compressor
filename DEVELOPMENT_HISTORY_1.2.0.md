@@ -3,7 +3,7 @@
 日期：2026-08-26
 正式基线：GitHub `origin/main` / `e8e2e21`（1.1.0）
 开发分支：`agent/match-gain-candidate`
-工作区：`D:\Codex\Workspaces\DB5035-MatchGain-Candidate`
+工作区：本地独立 Git 工作区（公开记录不保存本机绝对路径）
 
 ## 版本目标
 
@@ -28,7 +28,7 @@
 
 - 最初功能候选版沿用了 1.1.0，用户指出难以辨认后，CMake、Projucer、Windows 包名与 Help 统一升级到 1.2.0。
 - 第一次增量编译后，VST3 `moduleinfo.json` 已显示 1.2.0，但旧构建目录中的 Windows 资源脚本仍保留 1.1.0。
-- 为避免旧缓存混入，改用全新目录 `D:\Codex\Temp\DB5035-MatchGain-1.2.0-clean-build` 重新配置并编译。
+- 为避免旧缓存混入，改用全新的 D 盘临时构建目录重新配置并编译。
 - 全新编译后，Windows FileVersion、ProductVersion、VST3 清单、JUCE 编译宏与 Help 显示全部统一为 1.2.0。
 
 ## 已完成验证
@@ -46,7 +46,7 @@
 - 版本：`1.2.0`
 - Windows：x64 VST3
 - macOS：Apple Silicon VST3、Intel VST3、Universal 2 AU
-- 正式 Plan B 备份必须位于 `D:\备份文件\Vibe Coding\DB-5035 Qing Compressor`。
+- 正式 Plan B 备份必须位于用户指定的自动同步源码备份层级。
 - Plan C 必须保留 README 的全部旧版本内容，只追加 1.2.0 中英双语介绍和功能截图。
 - Plan D 最终包必须放到桌面，根目录只保留中英文安装说明以及 `Win`、`Mac` 文件夹。
 
