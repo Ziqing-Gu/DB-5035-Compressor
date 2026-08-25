@@ -6,6 +6,9 @@
 
 当前正式版本：`1.2.0`
 
+> **官方成品下载 / Official downloads:** [DB-5035 Qing Compressor Releases](https://github.com/Ziqing-Gu/DB-5035-Compressor-Release/releases/latest)
+> 完整源码保留在本仓库；Windows/macOS VST3 与 Universal 2 AU 成品请从独立 Release 仓库下载。 / The complete source remains in this repository; download Windows/macOS VST3 and Universal 2 AU binaries from the separate Release repository.
+
 ## 1.2.0 更新 / What's new in 1.2.0
 
 **发布日期 / Release date:** 2026-08-26
