@@ -80,6 +80,14 @@ namespace
             std::copy_n (source.getReadPointer (channel), numSamples, destination.getChannelPointer ((size_t) channel));
     }
 
+    void copyAudioBuffer (const juce::AudioBuffer<float>& source, juce::AudioBuffer<float>& destination)
+    {
+        destination.setSize (source.getNumChannels(), source.getNumSamples(), false, false, true);
+
+        for (int channel = 0; channel < source.getNumChannels(); ++channel)
+            destination.copyFrom (channel, 0, source, channel, 0, source.getNumSamples());
+    }
+
     void stretchDetectorWithoutFiltering (const juce::AudioBuffer<float>& source,
                                           juce::AudioBuffer<float>& destination,
                                           int factor,
@@ -143,6 +151,7 @@ void DB5035AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
                          samplesPerBlock,
                          juce::jmax (1, getMainBusNumOutputChannels()),
                          juce::jmax (1, getBusCount (true) > 1 ? getChannelCountOfBus (true, 1) : getMainBusNumInputChannels()));
+    resetMatchOnNextPlaybackBlock.store (true, std::memory_order_relaxed);
 }
 
 void DB5035AudioProcessor::releaseResources()
@@ -153,6 +162,17 @@ void DB5035AudioProcessor::releaseResources()
 
     bypassDelayBuffer.clear();
     bypassDelayWritePosition = 0;
+    matchDryBuffer.clear();
+    matchWetBuffer.clear();
+    oversampledMatchDryBuffer.clear();
+    oversampledMatchWetBuffer.clear();
+    resetMatchAccumulator();
+    matchMeasuring.store (false, std::memory_order_relaxed);
+    resetMatchOnNextPlaybackBlock.store (true, std::memory_order_relaxed);
+    lastTransportPlaying = false;
+    lastTransportSample = -1;
+    lastTransportBlockSize = 0;
+    lastMatchEligible = false;
     wasHostBypassed = false;
 }
 
@@ -229,8 +249,45 @@ void DB5035AudioProcessor::processBlockInternal (juce::AudioBuffer<float>& buffe
         compressor.setParameters (currentParameters);
     }
 
+    bool transportPlaying = false;
+    int64_t transportSample = -1;
+    if (auto* playHead = getPlayHead())
+    {
+        if (auto position = playHead->getPosition())
+        {
+            transportPlaying = position->getIsPlaying();
+            if (auto samplePosition = position->getTimeInSamples())
+                transportSample = *samplePosition;
+        }
+    }
+
+    auto transportDiscontinuity = false;
+    if (transportPlaying && lastTransportPlaying && transportSample >= 0 && lastTransportSample >= 0)
+    {
+        const auto expected = lastTransportSample + static_cast<int64_t> (lastTransportBlockSize);
+        transportDiscontinuity = std::llabs (transportSample - expected)
+                               > static_cast<int64_t> (juce::jmax (8, mainBuffer.getNumSamples() * 2));
+    }
+
     const auto hostBypassed = forceHostBypass || readHostBypass();
     const auto bypassInputDb = hostBypassed ? measurePeakDb (mainBuffer) : -80.0f;
+    const auto matchEligible = ! hostBypassed && currentParameters.compIn;
+
+    if (matchEligible && transportPlaying
+        && (! lastTransportPlaying
+            || ! lastMatchEligible
+            || transportDiscontinuity
+            || resetMatchOnNextPlaybackBlock.exchange (false, std::memory_order_relaxed)))
+    {
+        resetMatchAccumulator();
+    }
+    else if (! matchEligible && lastMatchEligible)
+    {
+        resetMatchAccumulator();
+    }
+
+    const auto measureMatch = matchEligible && transportPlaying;
+    matchMeasuring.store (measureMatch, std::memory_order_relaxed);
 
     // Keep the dry latency line primed during normal processing. When the host
     // bypasses the plug-in, render that delayed dry signal instead. This keeps
@@ -245,6 +302,10 @@ void DB5035AudioProcessor::processBlockInternal (juce::AudioBuffer<float>& buffe
 
         wasHostBypassed = true;
         publishBypassMeters (bypassInputDb, measurePeakDb (mainBuffer));
+        lastTransportPlaying = transportPlaying;
+        lastTransportSample = transportSample;
+        lastTransportBlockSize = mainBuffer.getNumSamples();
+        lastMatchEligible = matchEligible;
         return;
     }
 
@@ -253,9 +314,23 @@ void DB5035AudioProcessor::processBlockInternal (juce::AudioBuffer<float>& buffe
 
     const auto* activeSidechain = currentParameters.externalSidechain ? sidechain : nullptr;
     if (getOversamplingFactor() <= 1)
-        compressor.process (mainBuffer, activeSidechain);
+    {
+        if (measureMatch)
+        {
+            copyAudioBuffer (mainBuffer, matchDryBuffer);
+            matchWetBuffer.setSize (mainBuffer.getNumChannels(), mainBuffer.getNumSamples(), false, false, true);
+        }
+
+        compressor.process (mainBuffer, activeSidechain, measureMatch ? &matchWetBuffer : nullptr);
+
+        if (measureMatch)
+            processMatchBuffers (matchDryBuffer, matchWetBuffer);
+    }
     else
-        processOversampledBlock (mainBuffer, activeSidechain);
+        processOversampledBlock (mainBuffer, activeSidechain, measureMatch);
+
+    if (measureMatch)
+        updateMatchResult();
 
     const auto meters = compressor.getMeters();
     inputMeterDb.store (meters.inputDb, std::memory_order_relaxed);
@@ -264,6 +339,11 @@ void DB5035AudioProcessor::processBlockInternal (juce::AudioBuffer<float>& buffe
     accumulateMeterPeak (pendingInputMeterPeakDb, meters.inputDb);
     accumulateMeterPeak (pendingOutputMeterPeakDb, meters.outputDb);
     accumulateMeterPeak (pendingGainReductionPeakDb, meters.gainReductionDb);
+
+    lastTransportPlaying = transportPlaying;
+    lastTransportSample = transportSample;
+    lastTransportBlockSize = mainBuffer.getNumSamples();
+    lastMatchEligible = matchEligible;
 }
 
 bool DB5035AudioProcessor::readHostBypass() const
@@ -410,6 +490,55 @@ DiodeBridgeCompressorMeters DB5035AudioProcessor::consumeMeterPeaks()
         juce::jmax (latest.outputDb, outputPeak),
         juce::jmax (latest.gainReductionDb, reductionPeak)
     };
+}
+
+void DB5035AudioProcessor::resetMatchAccumulator() noexcept
+{
+    loudnessMatch.reset();
+    compressor.resetMatchOutputTap();
+    matchGainDb.store (0.0f, std::memory_order_relaxed);
+    matchReady.store (false, std::memory_order_relaxed);
+}
+
+void DB5035AudioProcessor::updateMatchResult() noexcept
+{
+    const auto& result = loudnessMatch.getLatestResult();
+    if (! result.valid)
+        return;
+
+    matchGainDb.store (juce::jlimit (-6.0f, 20.0f, result.targetGainDb), std::memory_order_relaxed);
+    matchReady.store (true, std::memory_order_relaxed);
+}
+
+bool DB5035AudioProcessor::hasMatchData() const noexcept
+{
+    if (! matchReady.load (std::memory_order_relaxed))
+        return false;
+
+    if (auto* compIn = parameters.getRawParameterValue (ParamID::compIn))
+        if (compIn->load (std::memory_order_relaxed) < 0.5f)
+            return false;
+
+    return ! readHostBypass();
+}
+
+bool DB5035AudioProcessor::applyLoudnessMatch()
+{
+    if (! hasMatchData())
+        return false;
+
+    auto* parameter = parameters.getParameter (ParamID::makeupGain);
+    if (parameter == nullptr)
+        return false;
+
+    const auto targetDb = matchGainDb.load (std::memory_order_relaxed);
+    undoManager.beginNewTransaction ("Match Gain");
+    parameter->beginChangeGesture();
+    parameter->setValueNotifyingHost (parameter->convertTo0to1 (targetDb));
+    parameter->endChangeGesture();
+    matchReady.store (false, std::memory_order_relaxed);
+    resetMatchOnNextPlaybackBlock.store (true, std::memory_order_relaxed);
+    return true;
 }
 
 void DB5035AudioProcessor::selectCompareSlot (int slotIndex)
@@ -573,7 +702,7 @@ DB5035AudioProcessor::APVTS::ParameterLayout DB5035AudioProcessor::createParamet
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ParamID::makeupGain, 1 }, "Gain",
-        juce::NormalisableRange<float> (-6.0f, 20.0f, 0.1f), 0.0f));
+        juce::NormalisableRange<float> (-6.0f, 20.0f, 0.01f), 0.0f));
 
     params.push_back (std::make_unique<juce::AudioParameterChoice> (
         juce::ParameterID { ParamID::timing, 1 }, "Timing",
@@ -679,6 +808,16 @@ void DB5035AudioProcessor::prepareOversampling (int oversamplingIndex,
     }
 
     compressor.prepare (preparedSampleRate * (double) getOversamplingFactor(), preparedMainChannels);
+    const auto oversampledCapacity = preparedBlockSize * getOversamplingFactor();
+    matchDryBuffer.setSize (preparedMainChannels, preparedBlockSize, false, false, true);
+    matchWetBuffer.setSize (preparedMainChannels, preparedBlockSize, false, false, true);
+    oversampledMatchDryBuffer.setSize (preparedMainChannels, oversampledCapacity, false, false, true);
+    oversampledMatchWetBuffer.setSize (preparedMainChannels, oversampledCapacity, false, false, true);
+    loudnessMatch.prepare (preparedSampleRate * (double) getOversamplingFactor());
+    compressor.resetMatchOutputTap();
+    matchReady.store (false, std::memory_order_relaxed);
+    matchMeasuring.store (false, std::memory_order_relaxed);
+    resetMatchOnNextPlaybackBlock.store (true, std::memory_order_relaxed);
     prepareLatencyMatchedBypass (preparedMainChannels, preparedBlockSize);
 }
 
@@ -721,12 +860,33 @@ void DB5035AudioProcessor::processLatencyMatchedDry (juce::AudioBuffer<float>& b
     }
 }
 
+void DB5035AudioProcessor::processMatchBuffers (const juce::AudioBuffer<float>& dry,
+                                                const juce::AudioBuffer<float>& wet) noexcept
+{
+    const auto samples = juce::jmin (dry.getNumSamples(), wet.getNumSamples());
+    const auto channels = juce::jmin (dry.getNumChannels(), wet.getNumChannels());
+    if (samples <= 0 || channels <= 0)
+        return;
+
+    for (int sample = 0; sample < samples; ++sample)
+    {
+        const auto dryL = dry.getSample (0, sample);
+        const auto wetL = wet.getSample (0, sample);
+        const auto dryR = channels > 1 ? dry.getSample (1, sample) : 0.0f;
+        const auto wetR = channels > 1 ? wet.getSample (1, sample) : 0.0f;
+        loudnessMatch.processSample (dryL, dryR, wetL, wetR);
+    }
+}
+
 void DB5035AudioProcessor::processOversampledBlock (juce::AudioBuffer<float>& mainBuffer,
-                                                    const juce::AudioBuffer<float>* sidechain)
+                                                    const juce::AudioBuffer<float>* sidechain,
+                                                    bool measureMatch)
 {
     if (mainOversampler == nullptr)
     {
         compressor.process (mainBuffer, sidechain);
+        if (measureMatch)
+            resetMatchAccumulator();
         return;
     }
 
@@ -736,10 +896,18 @@ void DB5035AudioProcessor::processOversampledBlock (juce::AudioBuffer<float>& ma
     if (upsampledMainBlock.getNumSamples() == 0)
     {
         compressor.process (mainBuffer, sidechain);
+        if (measureMatch)
+            resetMatchAccumulator();
         return;
     }
 
     copyBlockToBuffer (upsampledMainBlock, oversampledMainBuffer);
+    if (measureMatch)
+    {
+        copyAudioBuffer (oversampledMainBuffer, oversampledMatchDryBuffer);
+        oversampledMatchWetBuffer.setSize (oversampledMainBuffer.getNumChannels(),
+                                           oversampledMainBuffer.getNumSamples(), false, false, true);
+    }
 
     const juce::AudioBuffer<float>* oversampledSidechain = nullptr;
     if (sidechain != nullptr && sidechain->getNumSamples() > 0)
@@ -751,7 +919,11 @@ void DB5035AudioProcessor::processOversampledBlock (juce::AudioBuffer<float>& ma
         oversampledSidechain = &oversampledSidechainBuffer;
     }
 
-    compressor.process (oversampledMainBuffer, oversampledSidechain);
+    compressor.process (oversampledMainBuffer, oversampledSidechain,
+                        measureMatch ? &oversampledMatchWetBuffer : nullptr);
+    if (measureMatch)
+        processMatchBuffers (oversampledMatchDryBuffer, oversampledMatchWetBuffer);
+
     copyBufferToBlock (oversampledMainBuffer, upsampledMainBlock);
 
     auto mainOutputBlock = juce::dsp::AudioBlock<float> (mainBuffer);

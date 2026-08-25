@@ -1,8 +1,47 @@
 ﻿# DB-5035 Qing Compressor
 
 > 开发过程与 AI 交接记录：请先阅读 [DEVELOPMENT_HISTORY_1.1.0.md](DEVELOPMENT_HISTORY_1.1.0.md)。后续每次修改代码后都必须追加本次开发经过，不得覆盖旧记录。
+> 1.2.0 Match Gain 稳定基线的完整设计、验证与交接记录见 [DEVELOPMENT_HISTORY_1.2.0.md](DEVELOPMENT_HISTORY_1.2.0.md)。
 
-当前正式版本：`1.1.0`
+当前正式版本：`1.2.0`
+
+## 1.2.0 更新 / What's new in 1.2.0
+
+![DB-5035 1.2.0 Match Gain：播放期间完成 LUFS 测量后，顶部按钮显示建议增益 M +3.65](docs/images/db5035-match-gain-1.2.0.png)
+
+### 中文
+
+- **新增自动 Match Gain：** DB-5035 会在宿主播放期间，同时测量 Dry 输入与全 Wet 压缩信号的 Integrated LUFS，并计算需要补偿的 Gain。
+- **符合 BS.1770 / EBU R128：** 使用 K-weighting、400 ms 测量块、75% 重叠以及绝对/相对门限，不以 Peak、RMS 或瞬时响度代替长期响度匹配。
+- **测量位置明确：** Wet 测量包含压缩、染色、瞬态穿透、Timing 内部校准和固定输出带宽，但位于用户 Gain 与 Blend 之前；因此结果不会被当前 Makeup Gain 或 Dry/Wet 混合比例重复影响。
+- **简单的三态操作：** `MATCH` 表示等待播放，`M...` 表示正在累计，出现如图所示的 `M +3.65` 后，点击按钮即可把建议值写入 Gain。
+- **Gain 精度提升：** Gain 的实际步进与界面显示统一提高到 `0.01 dB`，方便与其它 LUFS Match 插件精确对齐。
+- **Classic 与 Vintage 共用：** Match 位于顶部命令条，不破坏 Vintage 复古面板设计，两套 UI 都能使用同一套功能。
+- **兼容旧工程：** 没有新增或重排宿主自动化参数；Match 写入现有 `makeupGain`，原项目、自动化和 A/B 快照继续兼容。
+- **版本同步：** CMake、Projucer、Windows 文件属性、VST3 清单与 Help 页面均显示 `Version 1.2.0`。
+
+#### 使用方法
+
+1. 在工程中正常播放需要匹配的片段。
+2. 等待按钮由 `M...` 变成带正负号的建议值，例如 `M +3.65`。
+3. 点击该按钮，建议值会写入 Gain；如需重新测量，可停止后重新播放或移动播放位置。
+
+### English
+
+- **New automatic Match Gain:** During host playback, DB-5035 measures the Integrated LUFS of the Dry input and the fully processed Wet signal, then calculates the required Gain compensation.
+- **BS.1770 / EBU R128 measurement:** It uses K-weighting, 400 ms blocks, 75% overlap, and absolute/relative gating instead of substituting peak, RMS, or momentary loudness.
+- **Defined measurement point:** Wet measurement includes compression, colour, transient pass, internal Timing calibration, and fixed output bandwidth, but is taken before user Gain and Blend. The result is therefore not counted twice by the current makeup setting or Dry/Wet mix.
+- **Simple three-state workflow:** `MATCH` waits for playback, `M...` means measurement is in progress, and a result such as `M +3.65` can be clicked to write the recommendation to Gain.
+- **Higher Gain precision:** The real parameter step and UI display now use `0.01 dB`, allowing closer alignment with other LUFS matching tools.
+- **Shared by Classic and Vintage:** Match lives in the top command strip, preserving the Vintage panel design while keeping the feature available in both UI modes.
+- **Existing-session compatibility:** No host automation parameter was added or reordered. Match writes to the existing `makeupGain`, preserving projects, automation, and A/B snapshots.
+- **Synchronized versioning:** CMake, Projucer, Windows file metadata, the VST3 manifest, and Help all report `Version 1.2.0`.
+
+#### How to use
+
+1. Play the section that you want to loudness-match.
+2. Wait until `M...` becomes a signed recommendation such as `M +3.65`.
+3. Click the button to write the recommendation to Gain. Stop/restart playback or move the playhead to begin a fresh measurement.
 
 ## 1.1.0 更新 / What's new in 1.1.0
 

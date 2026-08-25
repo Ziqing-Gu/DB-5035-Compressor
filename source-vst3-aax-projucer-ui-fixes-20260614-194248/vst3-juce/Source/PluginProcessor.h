@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include <array>
 #include <memory>
+#include "BS1770LoudnessMatch.h"
 #include "DiodeBridgeCompressor.h"
 
 class DB5035AudioProcessor final : public juce::AudioProcessor
@@ -49,6 +50,10 @@ public:
     void setVuMode (int mode);
     int getUiStyle() const { return uiStyle; }
     void setUiStyle (int style);
+    bool hasMatchData() const noexcept;
+    bool isMatchMeasuring() const noexcept { return matchMeasuring.load (std::memory_order_relaxed); }
+    float getMatchGainDb() const noexcept { return matchGainDb.load (std::memory_order_relaxed); }
+    bool applyLoudnessMatch();
 
     static APVTS::ParameterLayout createParameterLayout();
 
@@ -60,8 +65,13 @@ private:
     int readOversamplingIndex() const;
     int getOversamplingFactor() const;
     void prepareOversampling (int oversamplingIndex, int samplesPerBlock, int mainChannels, int sidechainChannels);
-    void processOversampledBlock (juce::AudioBuffer<float>& mainBuffer, const juce::AudioBuffer<float>* sidechain);
+    void processOversampledBlock (juce::AudioBuffer<float>& mainBuffer,
+                                  const juce::AudioBuffer<float>* sidechain,
+                                  bool measureMatch);
     void processBlockInternal (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, bool forceHostBypass);
+    void processMatchBuffers (const juce::AudioBuffer<float>& dry, const juce::AudioBuffer<float>& wet) noexcept;
+    void resetMatchAccumulator() noexcept;
+    void updateMatchResult() noexcept;
     bool readHostBypass() const;
     void prepareLatencyMatchedBypass (int maximumChannels, int maximumBlockSize);
     void processLatencyMatchedDry (juce::AudioBuffer<float>& buffer, bool writeDelayedSignalToOutput);
@@ -85,6 +95,10 @@ private:
     std::unique_ptr<juce::dsp::Oversampling<float>> mainOversampler;
     juce::AudioBuffer<float> oversampledMainBuffer;
     juce::AudioBuffer<float> oversampledSidechainBuffer;
+    juce::AudioBuffer<float> matchDryBuffer;
+    juce::AudioBuffer<float> matchWetBuffer;
+    juce::AudioBuffer<float> oversampledMatchDryBuffer;
+    juce::AudioBuffer<float> oversampledMatchWetBuffer;
     juce::AudioBuffer<float> bypassDelayBuffer;
     int bypassDelayWritePosition = 0;
     int bypassDelaySamples = 0;
@@ -94,6 +108,15 @@ private:
     int preparedSidechainChannels = 0;
     int activeOversamplingIndex = 0;
     bool wasHostBypassed = false;
+    db5035::BS1770LoudnessMatch loudnessMatch;
+    std::atomic<float> matchGainDb { 0.0f };
+    std::atomic<bool> matchReady { false };
+    std::atomic<bool> matchMeasuring { false };
+    std::atomic<bool> resetMatchOnNextPlaybackBlock { true };
+    bool lastTransportPlaying = false;
+    int64_t lastTransportSample = -1;
+    int lastTransportBlockSize = 0;
+    bool lastMatchEligible = false;
     std::atomic<float> inputMeterDb { -80.0f };
     std::atomic<float> outputMeterDb { -80.0f };
     std::atomic<float> gainReductionDb { 0.0f };

@@ -73,6 +73,12 @@ public:
         std::fill (sidechainState.begin(), sidechainState.end(), 0.0f);
         std::fill (lastSidechain.begin(), lastSidechain.end(), 0.0f);
         std::fill (outputBandwidthState.begin(), outputBandwidthState.end(), 0.0f);
+        std::fill (matchOutputBandwidthState.begin(), matchOutputBandwidthState.end(), 0.0f);
+    }
+
+    void resetMatchOutputTap() noexcept
+    {
+        std::fill (matchOutputBandwidthState.begin(), matchOutputBandwidthState.end(), 0.0f);
     }
 
     void setParameters (const DiodeBridgeCompressorParameters& newParameters)
@@ -80,7 +86,9 @@ public:
         parameters = newParameters;
     }
 
-    void process (juce::AudioBuffer<float>& buffer, const juce::AudioBuffer<float>* externalSidechain = nullptr)
+    void process (juce::AudioBuffer<float>& buffer,
+                  const juce::AudioBuffer<float>* externalSidechain = nullptr,
+                  juce::AudioBuffer<float>* wetBeforeMakeup = nullptr)
     {
         const auto numChannels = buffer.getNumChannels();
         const auto numSamples = buffer.getNumSamples();
@@ -90,6 +98,14 @@ public:
 
         ensureChannelStorage (juce::jmax (numChannels, externalSidechain != nullptr ? externalSidechain->getNumChannels() : numChannels));
         meterInput (buffer);
+
+        if (wetBeforeMakeup != nullptr
+            && (wetBeforeMakeup->getNumChannels() < numChannels
+                || wetBeforeMakeup->getNumSamples() < numSamples))
+        {
+            jassertfalse;
+            wetBeforeMakeup = nullptr;
+        }
 
         if (! parameters.compIn)
         {
@@ -129,6 +145,7 @@ public:
             std::fill (sidechainState.begin(), sidechainState.end(), 0.0f);
             std::fill (lastSidechain.begin(), lastSidechain.end(), 0.0f);
             std::fill (outputBandwidthState.begin(), outputBandwidthState.end(), 0.0f);
+            std::fill (matchOutputBandwidthState.begin(), matchOutputBandwidthState.end(), 0.0f);
             return;
         }
 
@@ -144,14 +161,17 @@ public:
         else if (parameters.timingIndex == 4)
             timingOutputTrimDb = parameters.fastMode ? -1.7f : -2.1f;
 
-        const auto outputGain = juce::Decibels::decibelsToGain (parameters.makeupGainDb + timingOutputTrimDb);
+        const auto timingOutputGain = juce::Decibels::decibelsToGain (timingOutputTrimDb);
+        const auto outputGain = juce::Decibels::decibelsToGain (parameters.makeupGainDb) * timingOutputGain;
         const auto wet = juce::jlimit (0.0f, 1.0f, parameters.blendPercent / 100.0f);
         const auto dry = 1.0f - wet;
 
         if (parameters.linkStereo || numChannels == 1)
-            processLinked (buffer, externalSidechain, timing, hpfCoeff, outputGain, wet, dry);
+            processLinked (buffer, externalSidechain, timing, hpfCoeff, outputGain, timingOutputGain,
+                           wet, dry, wetBeforeMakeup);
         else
-            processDualMono (buffer, externalSidechain, timing, hpfCoeff, outputGain, wet, dry);
+            processDualMono (buffer, externalSidechain, timing, hpfCoeff, outputGain, timingOutputGain,
+                             wet, dry, wetBeforeMakeup);
 
         meters.inputDb = linearToDb (inputPeak);
         meters.outputDb = linearToDb (outputPeak);
@@ -1704,8 +1724,10 @@ private:
                         const Timing& timing,
                         float hpfCoeff,
                         float outputGain,
+                        float timingOutputGain,
                         float wet,
-                        float dry)
+                        float dry,
+                        juce::AudioBuffer<float>* wetBeforeMakeup)
     {
         const auto numChannels = buffer.getNumChannels();
         const auto ratio = getRatio();
@@ -1747,7 +1769,8 @@ private:
 
             blockGainReduction = juce::jmax (blockGainReduction, gainResult.gainReductionDb);
             for (int channel = 0; channel < numChannels; ++channel)
-                writeOutputSample (buffer, channel, sampleIndex, ratio, gainResult.gain, outputGain, wet, dry, transientPass);
+                writeOutputSample (buffer, channel, sampleIndex, ratio, gainResult.gain,
+                                   outputGain, timingOutputGain, wet, dry, transientPass, wetBeforeMakeup);
         }
 
         meterGainReductionDb = blockGainReduction;
@@ -1758,8 +1781,10 @@ private:
                           const Timing& timing,
                           float hpfCoeff,
                           float outputGain,
+                          float timingOutputGain,
                           float wet,
-                          float dry)
+                          float dry,
+                          juce::AudioBuffer<float>* wetBeforeMakeup)
     {
         const auto numChannels = buffer.getNumChannels();
         const auto ratio = getRatio();
@@ -1801,7 +1826,8 @@ private:
                 gainResult = applySlowInstantPeakControl (gainResult, detector, envelope, ratio);
                 gainResult = applyAutoAttackShoulderDip (gainResult, detector, envelope, ratio);
                 sampleGainReduction = juce::jmax (sampleGainReduction, gainResult.gainReductionDb);
-                writeOutputSample (buffer, channel, sampleIndex, ratio, gainResult.gain, outputGain, wet, dry, transientPass);
+                writeOutputSample (buffer, channel, sampleIndex, ratio, gainResult.gain,
+                                   outputGain, timingOutputGain, wet, dry, transientPass, wetBeforeMakeup);
             }
 
             blockGainReduction = juce::jmax (blockGainReduction, sampleGainReduction);
@@ -1817,18 +1843,32 @@ private:
                             float ratio,
                             float gain,
                             float outputGain,
+                            float timingOutputGain,
                             float wet,
                             float dry,
-                            float transientPass)
+                            float transientPass,
+                            juce::AudioBuffer<float>* wetBeforeMakeup)
     {
         const auto drySample = buffer.getSample (channel, sampleIndex);
         const auto transientDry = dry + wet * transientPass;
         const auto transientWet = wet * (1.0f - transientPass);
         const auto transientLift = 1.0f;
-        const auto compressed = colourSample (drySample, ratio, getColourAmountForGain (gain)) * gain * outputGain;
+        const auto gainReduced = colourSample (drySample, ratio, getColourAmountForGain (gain)) * gain;
+        const auto compressed = gainReduced * outputGain;
         const auto output = (drySample * transientDry + compressed * transientWet) * transientLift;
 
         const auto voicedOutput = applyOutputBandwidth (channel, output);
+
+        if (wetBeforeMakeup != nullptr)
+        {
+            // Reconstruct the fully Wet branch while excluding only the
+            // user-facing Gain and Blend controls. Hidden Timing calibration,
+            // transient pass and bandwidth voicing remain in the measurement.
+            const auto wetPreMakeup = (drySample * transientPass
+                                     + gainReduced * timingOutputGain * (1.0f - transientPass)) * transientLift;
+            wetBeforeMakeup->setSample (channel, sampleIndex,
+                                        applyMatchOutputBandwidth (channel, wetPreMakeup));
+        }
 
         buffer.setSample (channel, sampleIndex, voicedOutput);
         outputPeak = juce::jmax (outputPeak, std::abs (voicedOutput));
@@ -1842,8 +1882,18 @@ private:
 
     float applyOutputBandwidth (int channel, float sample)
     {
-        const auto stateIndex = (size_t) juce::jlimit (0, (int) outputBandwidthState.size() - 1, channel);
-        auto& state = outputBandwidthState[stateIndex];
+        return applyOutputBandwidthToState (outputBandwidthState, channel, sample);
+    }
+
+    float applyMatchOutputBandwidth (int channel, float sample)
+    {
+        return applyOutputBandwidthToState (matchOutputBandwidthState, channel, sample);
+    }
+
+    float applyOutputBandwidthToState (std::vector<float>& states, int channel, float sample)
+    {
+        const auto stateIndex = (size_t) juce::jlimit (0, (int) states.size() - 1, channel);
+        auto& state = states[stateIndex];
         state = sample + outputBandwidthCoeff * (state - sample);
 
         const auto bandwidthAmount = 0.18f;
@@ -1909,6 +1959,9 @@ private:
         if (outputBandwidthState.size() < channels)
             outputBandwidthState.resize (channels, 0.0f);
 
+        if (matchOutputBandwidthState.size() < channels)
+            matchOutputBandwidthState.resize (channels, 0.0f);
+
     }
 
     DiodeBridgeCompressorParameters parameters;
@@ -1929,6 +1982,7 @@ private:
     std::vector<float> sidechainState;
     std::vector<float> lastSidechain;
     std::vector<float> outputBandwidthState;
+    std::vector<float> matchOutputBandwidthState;
     double sampleRate = 44100.0;
     float outputBandwidthCoeff = 0.0f;
     float linkedEnvelope = 0.0f;
