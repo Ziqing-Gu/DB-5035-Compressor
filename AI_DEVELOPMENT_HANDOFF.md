@@ -26,15 +26,15 @@
 
 ## 当前已知问题
 
-- macOS Apple Silicon VST3、Intel VST3 与 Universal 2 AU 尚需在 Plan D 从同一公开 commit 构建并完成架构、bundle、版本和哈希验证。
+- macOS Apple Silicon VST3、Intel VST3 与 Universal 2 AU 已在 Plan D 从同一公开 commit 构建，并完成架构、bundle、版本、哈希和 AU 验证；仍建议用户在真实 macOS 宿主中继续反馈兼容性。
 - 项目许可证已由作者明确选择为 GPL-3.0-or-later；仓库根目录 `LICENSE` 保存未经改写的 GPLv3 正文，README 保存 “or later” 项目声明。
 
-## 当前正在执行
+## 当前发布状态
 
-- Plan B：按正式自动同步目录层级刷新 1.2.0 源码快照。
-- Plan C：补齐公开 README、CHANGELOG、构建说明、GPL-3.0-or-later 许可证、tag 和远端核对。
-- Plan D：Plan C 完成后从确定公开 commit 构建四类用户成品并交付桌面包。
-
+- Plan A：Windows 本地构建、自测、validator、系统安装和用户宿主测试已完成。
+- Plan B：正式源码快照已写入用户指定备份层级并通过逐文件 SHA-256 校验。
+- Plan C：PR、main、v1.2.0 标签、README、CHANGELOG、许可证和远端内容核对已完成。
+- Plan D：同一公开提交的四类成品、架构/版本/AU 验证、安装教程和桌面交付已完成。
 ---
 
 ## v1.2.0 — Integrated LUFS Match Gain
@@ -101,3 +101,36 @@ macOS 三类成品和 AU `auval` 结果必须等待 Plan D 的 GitHub Actions；
 ### 后续建议
 
 完成 Plan C/D 后，把公开 commit/tag、workflow run、四类 artifact、内部验证目录和桌面交付路径追加到本文件；不得删除本条的候选过程和失败原因。
+---
+
+## v1.2.0 Plan C / Plan D 发布证据
+
+### 公开源码与版本
+
+- GitHub PR：#15 — `DB-5035 1.2.0: Integrated LUFS Match Gain`
+- PR 合并提交：`ac94688b1900ad870c51f96709b7faa8cbafd8ce`
+- 稳定标签：`v1.2.0`，解引用后指向同一合并提交。
+- Plan B 源码树与合并时 `main` 源码树一致；发布后仅追加本节交接证据，不改变插件源码或已构建二进制。
+- README 在线核对通过：1.2.0 中英双语说明与 Match Gain 截图存在，1.02 至 1.1.0 的历史更新内容均保留。
+- 根目录 `LICENSE` 为 GNU GPLv3 官方正文；README 明确项目采用 GPL-3.0-or-later。
+
+### GitHub Actions
+
+- Windows run `32907819815`：Windows x64 VST3 构建、打包和上传成功。
+- macOS run `32907822471`：Apple Silicon VST3、Intel VST3、Universal 2 AU 全部成功。
+- 四类 job 均检出 `v1.2.0` / `ac94688b1900ad870c51f96709b7faa8cbafd8ce`。
+- Apple Silicon VST3：`arm64`；Intel VST3：`x86_64`；AU：`x86_64 + arm64`。
+- AU `auval -v aufx Db3Q CdxA` 返回 `AU VALIDATION SUCCEEDED.`。
+
+### 成品验收与交付
+
+- Windows PE Machine 为 `0x8664`，FileVersion 与 ProductVersion 均为 1.2.0。
+- 三个 macOS bundle 的 CFBundleShortVersionString 与 CFBundleVersion 均为 1.2.0。
+- 四个用户 ZIP 均通过非空、bundle 根目录、结构、版本、架构与 SHA-256 检查。
+- 最终用户包按根目录双语安装教程、`Win`、`Mac` 的精简结构交付；内部日志和证明文件不混入用户桌面包。
+
+### 后续 AI 必须遵守
+
+- 新功能必须先追加到本权威交接文件，再更新版本文档；不得删除候选过程、失败原因或历史证据。
+- 任何源码或发布文档变更若发生在 Plan B 之后，必须刷新 Plan B，不能沿用旧 manifest。
+- Plan D 成品必须来自同一确定公开 commit/tag，且 Windows、Apple Silicon、Intel、AU 四类结果分别验证和报告。
