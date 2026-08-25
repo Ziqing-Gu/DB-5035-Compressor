@@ -1,8 +1,97 @@
-﻿# DB-5035 Qing Compressor
+# DB-5035 Qing Compressor
 
 > 开发过程与 AI 交接记录：请先阅读 [DEVELOPMENT_HISTORY_1.1.0.md](DEVELOPMENT_HISTORY_1.1.0.md)。后续每次修改代码后都必须追加本次开发经过，不得覆盖旧记录。
+> 1.2.0 Match Gain 稳定基线的完整设计、验证与交接记录见 [DEVELOPMENT_HISTORY_1.2.0.md](DEVELOPMENT_HISTORY_1.2.0.md)。
+> 当前项目的权威 AI 交接文件为 [AI_DEVELOPMENT_HANDOFF.md](AI_DEVELOPMENT_HANDOFF.md)；开发历史只能累积追加，不得删除旧过程。
 
-当前正式版本：`1.1.0`
+当前正式版本：`1.2.0`
+
+## 1.2.0 更新 / What's new in 1.2.0
+
+**发布日期 / Release date:** 2026-08-26
+**状态 / Status:** Stable（用户已在 Windows 宿主完成测试并确认 / user-tested and approved on a Windows host）
+**基于 / Based on:** 1.1.0
+**开发状态记录 / Development-state note:** Match Gain 最初以未升版候选状态完成，随后因用户要求可辨识版本而统一升级为 1.2.0；旧构建缓存导致的 Windows 1.1.0 文件属性问题已通过全新构建目录解决。 / Match Gain was first completed as an unversioned candidate, then promoted to 1.2.0 for clear identification. A stale Windows 1.1.0 file-resource cache was resolved with a clean build directory.
+
+![DB-5035 1.2.0 Match Gain：播放期间完成 LUFS 测量后，顶部按钮显示建议增益 M +3.65](docs/images/db5035-match-gain-1.2.0.png)
+
+### 中文
+
+- **新增自动 Match Gain：** DB-5035 会在宿主播放期间，同时测量 Dry 输入与全 Wet 压缩信号的 Integrated LUFS，并计算需要补偿的 Gain。
+- **符合 BS.1770 / EBU R128：** 使用 K-weighting、400 ms 测量块、75% 重叠以及绝对/相对门限，不以 Peak、RMS 或瞬时响度代替长期响度匹配。
+- **测量位置明确：** Wet 测量包含压缩、染色、瞬态穿透、Timing 内部校准和固定输出带宽，但位于用户 Gain 与 Blend 之前；因此结果不会被当前 Makeup Gain 或 Dry/Wet 混合比例重复影响。
+- **简单的三态操作：** `MATCH` 表示等待播放，`M...` 表示正在累计，出现如图所示的 `M +3.65` 后，点击按钮即可把建议值写入 Gain。
+- **Gain 精度提升：** Gain 的实际步进与界面显示统一提高到 `0.01 dB`，方便与其它 LUFS Match 插件精确对齐。
+- **Classic 与 Vintage 共用：** Match 位于顶部命令条，不破坏 Vintage 复古面板设计，两套 UI 都能使用同一套功能。
+- **兼容旧工程：** 没有新增或重排宿主自动化参数；Match 写入现有 `makeupGain`，原项目、自动化和 A/B 快照继续兼容。
+- **版本同步：** CMake、Projucer、Windows 文件属性、VST3 清单与 Help 页面均显示 `Version 1.2.0`。
+
+#### 使用方法
+
+1. 在工程中正常播放需要匹配的片段。
+2. 等待按钮由 `M...` 变成带正负号的建议值，例如 `M +3.65`。
+3. 点击该按钮，建议值会写入 Gain；如需重新测量，可停止后重新播放或移动播放位置。
+
+### English
+
+- **New automatic Match Gain:** During host playback, DB-5035 measures the Integrated LUFS of the Dry input and the fully processed Wet signal, then calculates the required Gain compensation.
+- **BS.1770 / EBU R128 measurement:** It uses K-weighting, 400 ms blocks, 75% overlap, and absolute/relative gating instead of substituting peak, RMS, or momentary loudness.
+- **Defined measurement point:** Wet measurement includes compression, colour, transient pass, internal Timing calibration, and fixed output bandwidth, but is taken before user Gain and Blend. The result is therefore not counted twice by the current makeup setting or Dry/Wet mix.
+- **Simple three-state workflow:** `MATCH` waits for playback, `M...` means measurement is in progress, and a result such as `M +3.65` can be clicked to write the recommendation to Gain.
+- **Higher Gain precision:** The real parameter step and UI display now use `0.01 dB`, allowing closer alignment with other LUFS matching tools.
+- **Shared by Classic and Vintage:** Match lives in the top command strip, preserving the Vintage panel design while keeping the feature available in both UI modes.
+- **Existing-session compatibility:** No host automation parameter was added or reordered. Match writes to the existing `makeupGain`, preserving projects, automation, and A/B snapshots.
+- **Synchronized versioning:** CMake, Projucer, Windows file metadata, the VST3 manifest, and Help all report `Version 1.2.0`.
+
+#### How to use
+
+1. Play the section that you want to loudness-match.
+2. Wait until `M...` becomes a signed recommendation such as `M +3.65`.
+3. Click the button to write the recommendation to Gain. Stop/restart playback or move the playhead to begin a fresh measurement.
+
+## 产品、平台与格式 / Product, platforms, and formats
+
+- **产品 / Product:** DB-5035 Qing Compressor
+- **厂商 / Vendor:** Qing Audio
+- **Windows:** x64 VST3
+- **macOS:** Apple Silicon (`arm64`) VST3, Intel (`x86_64`) VST3, and Universal 2 Audio Unit (`arm64 + x86_64`)
+- **用途 / Purpose:** Hardware-inspired diode-bridge dynamics processing with Classic/Vintage interfaces, oversampling, A/B comparison, VU metering, and Integrated LUFS Match Gain.
+
+## 基本安装 / Basic installation
+
+### Windows x64 VST3
+
+1. 完全退出 Cubase、Nuendo、REAPER、Studio One 等宿主。 / Fully quit all plug-in hosts.
+2. 解压 Windows x64 VST3 包。 / Extract the Windows x64 VST3 archive.
+3. 将 `DB-5035 Qing Compressor.vst3` 复制到 `C:\Program Files\Common Files\VST3`，并在提示时覆盖旧版。 / Copy the bundle to the system VST3 folder and replace the older copy when prompted.
+4. 重新打开宿主并重新扫描 VST3。 / Reopen the host and rescan VST3 plug-ins.
+
+### macOS VST3 / AU
+
+- Apple Silicon Mac 选择 `arm64` VST3，Intel Mac 选择 `x86_64` VST3；两种 VST3 架构不要同时安装。 / Choose the VST3 archive that matches the Mac architecture and do not install both variants.
+- VST3 用户目录：`~/Library/Audio/Plug-Ins/VST3`。 / User VST3 folder.
+- AU 用户目录：`~/Library/Audio/Plug-Ins/Components`。 / User Audio Unit folder.
+- Universal 2 AU 同时包含 `arm64` 与 `x86_64`，用于 Logic Pro 等 AU 宿主。 / The Universal 2 AU supports both architectures and is intended for AU hosts such as Logic Pro.
+- macOS 成品可能采用临时/ad-hoc 签名且未经过 Apple Developer ID 公证；只在确认来源可信后处理系统隔离属性。 / macOS artifacts may be ad-hoc signed and not Apple-notarized; only remove quarantine after verifying the source.
+
+## 从源码构建 / Build from source
+
+- **Windows:** Visual Studio 2022 Build Tools with the C++ workload, CMake 3.22 or newer, and PowerShell. Run `source-vst3-aax-projucer-ui-fixes-20260614-194248\build-vst3.ps1`.
+- **macOS:** Xcode command-line tools and CMake 3.22 or newer. Configure `source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce` with `DB5035_FETCH_JUCE=ON`, select the required `CMAKE_OSX_ARCHITECTURES`, and build `DB5035Compressor_VST3` or `DB5035Compressor_AU`.
+- GitHub Actions includes Windows x64 VST3, macOS Apple Silicon VST3, macOS Intel VST3, and Universal 2 AU workflows.
+
+## 已知限制与兼容性 / Known limitations and compatibility
+
+- Match Gain needs host transport playback and at least one 400 ms BS.1770 measurement block before a result can become available.
+- Match compares Dry with fully processed Wet before user Gain and Blend; it is a Wet makeup recommendation, not a final mixed-output target.
+- Existing parameter IDs and order are preserved, but users should keep only one installed copy of the plug-in to avoid host cache ambiguity.
+- Windows x64 has been built, validator-tested, host-tested, and user-approved. macOS architecture/AU validation belongs to Plan D and must be reported separately from Windows verification.
+
+## 许可证 / License
+
+本项目由项目作者按 **GNU General Public License v3.0 or later（GPL-3.0-or-later）** 发布。完整 GPLv3 条款见仓库根目录的 [LICENSE](LICENSE)；“or later” 许可选择以本节的项目声明为准。
+
+This project is released by its author under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**. See [LICENSE](LICENSE) for the complete GPLv3 terms; this project declaration grants the “or later” option.
 
 ## 1.1.0 更新 / What's new in 1.1.0
 

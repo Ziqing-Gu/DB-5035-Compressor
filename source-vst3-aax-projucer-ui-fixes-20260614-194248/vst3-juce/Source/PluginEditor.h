@@ -326,6 +326,7 @@ private:
     void updateUndoRedoButtons();
     void updateCompareButtons();
     void updateOversamplingButton();
+    void updateMatchButton();
     void updateVuModeFromProcessor();
 
     DB5035AudioProcessor& audioProcessor;
@@ -349,6 +350,7 @@ private:
     std::array<CommandButtonControl, 3> compareButtons;
     CommandButtonControl helpButton;
     CommandButtonControl oversamplingButton;
+    CommandButtonControl matchButton;
     juce::TextButton uiStyleButton;
     HelpOverlay helpOverlay;
     VUMeter vuMeter;

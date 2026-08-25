@@ -53,7 +53,7 @@ if (-not (Test-Path $artifact)) {
 
 $distDir = Join-Path $PSScriptRoot "dist"
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$package = Join-Path $distDir "DB-5035-Qing-Compressor-1.1.0-Windows-x64-$stamp.zip"
+$package = Join-Path $distDir "DB-5035-Qing-Compressor-1.2.0-Windows-x64-$stamp.zip"
 New-Item -ItemType Directory -Force -Path $distDir | Out-Null
 Compress-Archive -Path $artifact -DestinationPath $package
 

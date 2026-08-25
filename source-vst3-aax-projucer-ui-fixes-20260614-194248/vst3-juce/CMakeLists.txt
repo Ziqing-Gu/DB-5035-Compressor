@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(DB5035Compressor VERSION 1.1.0)
+project(DB5035Compressor VERSION 1.2.0)
 
 option(DB5035_FETCH_JUCE "Download JUCE with CMake FetchContent" ON)
 option(DB5035_ENABLE_VINTAGE_UI "Build the optional hardware-inspired UI and its resources" ON)
@@ -64,6 +64,7 @@ juce_generate_juce_header(DB5035Compressor)
 
 target_sources(DB5035Compressor
     PRIVATE
+        Source/BS1770LoudnessMatch.h
         Source/DiodeBridgeCompressor.h
         Source/PluginEditor.cpp
         Source/PluginEditor.h

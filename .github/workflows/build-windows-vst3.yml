@@ -1,4 +1,4 @@
-name: Build Windows VST3 1.1.0
+name: Build Windows VST3 1.2.0
 
 on:
   workflow_dispatch:
@@ -34,12 +34,12 @@ jobs:
         run: |
           $vst3 = "build-windows/DB5035Compressor_artefacts/Release/VST3/DB-5035 Qing Compressor.vst3"
           if (-not (Test-Path $vst3)) { throw "Missing DB-5035 VST3: $vst3" }
-          Compress-Archive -Path $vst3 -DestinationPath "DB-5035-Qing-Compressor-1.1.0-Windows-x64.zip"
+          Compress-Archive -Path $vst3 -DestinationPath "DB-5035-Qing-Compressor-1.2.0-Windows-x64.zip"
 
       - name: Upload packaged VST3
         uses: actions/upload-artifact@v4
         with:
-          name: DB-5035-Qing-Compressor-1.1.0-Windows-x64
-          path: DB-5035-Qing-Compressor-1.1.0-Windows-x64.zip
+          name: DB-5035-Qing-Compressor-1.2.0-Windows-x64
+          path: DB-5035-Qing-Compressor-1.2.0-Windows-x64.zip
           if-no-files-found: error
           retention-days: 7

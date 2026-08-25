@@ -181,7 +181,7 @@ namespace
             return juce::String (plain, 1) + " dBu";
 
         if (id == "makeupGain")
-            return juce::String (plain, 1) + " dB";
+            return juce::String (plain, 2) + " dB";
 
         if (id == "sidechainHPF")
             return juce::String (plain, 0) + " Hz";
@@ -444,6 +444,7 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
     configureCommandButton (compareButtons[2], "A>B");
     configureCommandButton (helpButton, "HELP");
     configureCommandButton (oversamplingButton, "OS");
+    configureCommandButton (matchButton, "MATCH");
     historyButtons[0].button.onClick = [this] { audioProcessor.getUndoManager().undo(); updateUndoRedoButtons(); };
     historyButtons[1].button.onClick = [this] { audioProcessor.getUndoManager().redo(); updateUndoRedoButtons(); };
     compareButtons[0].button.setButtonText ("A");
@@ -469,6 +470,12 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
             parameter->endChangeGesture();
             updateOversamplingButton();
         }
+    };
+    matchButton.button.onClick = [this]
+    {
+        audioProcessor.applyLoudnessMatch();
+        updateMatchButton();
+        updateValueLabels();
     };
 
     uiStyleButton.setClickingTogglesState (false);
@@ -497,6 +504,8 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
     helpButton.name.setVisible (false);
     oversamplingButton.button.setLookAndFeel (&flatCommandLookAndFeel);
     oversamplingButton.name.setVisible (false);
+    matchButton.button.setLookAndFeel (&flatCommandLookAndFeel);
+    matchButton.name.setVisible (false);
 
     static const VUMeter::Mode vuModes[] = { VUMeter::Mode::input, VUMeter::Mode::output, VUMeter::Mode::reduction };
     static const juce::String vuLabels[] = { "IN", "OUT", "REDUCTION" };
@@ -579,6 +588,7 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
     updateUndoRedoButtons();
     updateCompareButtons();
     updateOversamplingButton();
+    updateMatchButton();
 }
 
 DB5035AudioProcessorEditor::~DB5035AudioProcessorEditor()
@@ -589,6 +599,7 @@ DB5035AudioProcessorEditor::~DB5035AudioProcessorEditor()
         cb.button.setLookAndFeel (nullptr);
     helpButton.button.setLookAndFeel (nullptr);
     oversamplingButton.button.setLookAndFeel (nullptr);
+    matchButton.button.setLookAndFeel (nullptr);
     uiStyleButton.setLookAndFeel (nullptr);
     vuModeButton.setLookAndFeel (nullptr);
     setLookAndFeel (nullptr);
@@ -889,7 +900,10 @@ void DB5035AudioProcessorEditor::layoutCommandStrip()
     compareButtons[1].button.setBounds (r); r.setX (r.getRight() + gap);
     compareButtons[2].button.setBounds (r); r.setX (r.getRight() + gap);
     helpButton.button.setBounds (r); r.setX (r.getRight() + gap);
-    oversamplingButton.button.setBounds (r);
+    oversamplingButton.button.setBounds (r); r.setX (r.getRight() + gap);
+    // Vintage has no spare panel area. Keep Match in the shared command strip
+    // and use a compact result label such as "M +3.24".
+    matchButton.button.setBounds (r.withWidth (70));
     uiStyleButton.setBounds (getWidth() - 118, startY, 115, cmdBtnH);
 }
 
@@ -1072,6 +1086,7 @@ void DB5035AudioProcessorEditor::timerCallback()
     updateUndoRedoButtons();
     updateCompareButtons();
     updateOversamplingButton();
+    updateMatchButton();
 }
 
 void DB5035AudioProcessorEditor::configureKnob (KnobComponent& control,
@@ -1365,6 +1380,28 @@ void DB5035AudioProcessorEditor::updateOversamplingButton()
     {
         const auto index = (int) juce::jlimit (0.0f, 3.0f, std::round (value->load (std::memory_order_relaxed)));
         oversamplingButton.button.setButtonText (labels[index]);
+    }
+}
+
+void DB5035AudioProcessorEditor::updateMatchButton()
+{
+    const auto ready = audioProcessor.hasMatchData();
+    matchButton.button.setEnabled (ready);
+
+    if (ready)
+    {
+        const auto target = audioProcessor.getMatchGainDb();
+        const auto sign = target >= 0.0f ? "+" : "";
+        matchButton.button.setButtonText ("M " + juce::String (sign)
+                                         + juce::String (target, 2));
+    }
+    else if (audioProcessor.isMatchMeasuring())
+    {
+        matchButton.button.setButtonText ("M...");
+    }
+    else
+    {
+        matchButton.button.setButtonText ("MATCH");
     }
 }
 
