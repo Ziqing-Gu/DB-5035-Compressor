@@ -6,8 +6,17 @@
 
 当前正式版本：`1.2.0`
 
-> **官方成品下载 / Official downloads:** [DB-5035 Qing Compressor Releases](https://github.com/Ziqing-Gu/DB-5035-Compressor-Release/releases/latest)
-> 完整源码保留在本仓库；Windows/macOS VST3 与 Universal 2 AU 成品请从独立 Release 仓库下载。 / The complete source remains in this repository; download Windows/macOS VST3 and Universal 2 AU binaries from the separate Release repository.
+## 下载 / Download
+
+**[点击这里进入官方 Release 下载页 / Open the official Release download page](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/latest)**
+
+不熟悉 GitHub 的用户可以直接按系统选择下面的文件；请不要下载 GitHub 自动生成的 `Source code (zip)` 或 `Source code (tar.gz)`，它们是源码，不是可直接安装的插件。 / If you are unfamiliar with GitHub, choose the file for your system below. Do not download GitHub's automatically generated `Source code (zip)` or `Source code (tar.gz)` files; those are source archives, not installable plug-ins.
+
+- **Windows 64 位 VST3：** [DB-5035-Qing-Compressor-1.2.0-Windows-x64-VST3.zip](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-Windows-x64-VST3.zip)
+- **Apple Silicon Mac VST3（M1/M2/M3/M4）：** [DB-5035-Qing-Compressor-1.2.0-macOS-Apple-Silicon-VST3.zip](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-macOS-Apple-Silicon-VST3.zip)
+- **Intel Mac VST3：** [DB-5035-Qing-Compressor-1.2.0-macOS-Intel-x86_64-VST3.zip](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-macOS-Intel-x86_64-VST3.zip)
+- **Logic Pro / AU（Apple Silicon + Intel Universal 2）：** [DB-5035-Qing-Compressor-1.2.0-macOS-Universal-2-AU.zip](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-macOS-Universal-2-AU.zip)
+- **安装教程 / Installation guides：** [中文](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-Installation-Guide-Chinese.txt) · [English](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-Installation-Guide-English.txt)
 
 ## 1.2.0 更新 / What's new in 1.2.0
 
