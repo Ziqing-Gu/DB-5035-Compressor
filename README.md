@@ -1,3 +1,13 @@
+# ⚠️ 禁止商业使用 / NO COMMERCIAL USE
+
+## Qing Audio 非商业源码共享许可证 1.0
+
+### 本项目源码公开，但不属于 OSI 认可的开源软件
+
+> **禁止任何商业使用。** 仅允许个人、学习、教育、研究、评估、爱好及其他非商业用途。发布原版或修改版时，必须同时免费公开完整对应源代码，保留作者、版权和许可证声明，醒目标明原项目名称、作者、来源链接、修改者、修改日期及修改内容，并使整个修改版继续采用同一许可证。完整条款见 [LICENSE](LICENSE)。
+>
+> **NO COMMERCIAL USE.** Use is permitted only for personal, educational, research, evaluation, hobby, charitable, and other non-commercial purposes. Any distributed original or modified version must provide the complete corresponding source without charge, preserve authorship, copyright, and license notices, prominently identify the original project, author, source URL, modifier, date, and changes, and license the entire modified work under the same terms. See [LICENSE](LICENSE).
+
 # DB-5035 Qing Compressor
 
 > 开发过程与 AI 交接记录：请先阅读 [DEVELOPMENT_HISTORY_1.1.0.md](DEVELOPMENT_HISTORY_1.1.0.md)。后续每次修改代码后都必须追加本次开发经过，不得覆盖旧记录。
@@ -101,9 +111,11 @@
 
 ## 许可证 / License
 
-本项目由项目作者按 **GNU General Public License v3.0 or later（GPL-3.0-or-later）** 发布。完整 GPLv3 条款见仓库根目录的 [LICENSE](LICENSE)；“or later” 许可选择以本节的项目声明为准。
+本项目第一方源码采用 **Qing Audio 非商业源码共享许可证 1.0**（`LicenseRef-Qing-Audio-NC-Source-Share-1.0`）。禁止任何商业使用。发布原版、二进制版或修改版时，必须同时免费公开完整对应源代码，保留作者、版权与许可证声明，注明原项目、作者、来源链接、修改者、修改日期及修改内容，并使整个修改版继续采用同一许可证。完整条款见 [LICENSE](LICENSE)。第三方组件继续适用其各自许可证。
 
-This project is released by its author under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**. See [LICENSE](LICENSE) for the complete GPLv3 terms; this project declaration grants the “or later” option.
+This project's first-party source is licensed under the **Qing Audio Non-Commercial Source-Share License 1.0** (`LicenseRef-Qing-Audio-NC-Source-Share-1.0`). Commercial use is prohibited. Distribution of the original, binary, or modified version requires the complete corresponding source at no charge, preserved authorship, copyright, and license notices, prominent identification of the original project, author, source URL, modifier, date, and changes, and the same license for the entire modified work. See [LICENSE](LICENSE). Third-party components remain under their respective licenses.
+
+Previously distributed copies retain rights already granted; this License applies to copies supplied with it.
 
 ## 1.1.0 更新 / What's new in 1.1.0
 
@@ -350,7 +362,7 @@ I have also processed identical audio material through both the hardware and the
 <img width="1249" height="297" alt="image" src="https://github.com/user-attachments/assets/b2411083-3707-4a1d-8296-b4f552c6ab1d" />
 
 
-我为插件加入了许多现代商业插件常见的功能，例如 A/B 对比、过采样以及 Undo/Redo 系统。不过最近开始有越来越多用户提出新的功能需求。考虑到个人能力和时间的限制，我认为将项目开源是一个更好的选择，让其他开发者能够基于源代码继续完善和扩展它。
+我为插件加入了许多现代商业插件常见的功能，例如 A/B 对比、过采样以及 Undo/Redo 系统。不过最近开始有越来越多用户提出新的功能需求。考虑到个人能力和时间的限制，我认为公开项目源码是一个更好的选择，让其他开发者能够基于源代码继续完善和扩展它。
 
 The plugin already includes many features commonly found in modern commercial audio software, including A/B comparison, oversampling, and full Undo/Redo support. Recently, however, users have started requesting additional features and improvements. Given my limited development resources, I believe that open-sourcing the project is the best path forward, allowing other developers to modify, improve, and expand upon the codebase.
 
@@ -366,4 +378,3 @@ Enjoy!
 
 视频介绍(Vedio)：
 https://www.bilibili.com/video/BV1hfJL62E7E/?spm_id_from=333.1387.homepage.video_card.click&vd_source=755a32d6ff272ad1739298868f2881c9
-

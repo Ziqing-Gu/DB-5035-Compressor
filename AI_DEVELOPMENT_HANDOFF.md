@@ -27,7 +27,7 @@
 ## 当前已知问题
 
 - macOS Apple Silicon VST3、Intel VST3 与 Universal 2 AU 已在 Plan D 从同一公开 commit 构建，并完成架构、bundle、版本、哈希和 AU 验证；仍建议用户在真实 macOS 宿主中继续反馈兼容性。
-- 项目许可证已由作者明确选择为 GPL-3.0-or-later；仓库根目录 `LICENSE` 保存未经改写的 GPLv3 正文，README 保存 “or later” 项目声明。
+- 项目许可证已由作者明确选择为 LicenseRef-Qing-Audio-NC-Source-Share-1.0；仓库根目录 `LICENSE` 保存未经改写的 Qing Audio NC Source-Share License 1.0 正文，README 保存 “or later” 项目声明。
 
 ## 当前发布状态
 
@@ -112,7 +112,7 @@ macOS 三类成品和 AU `auval` 结果必须等待 Plan D 的 GitHub Actions；
 - 稳定标签：`v1.2.0`，解引用后指向同一合并提交。
 - Plan B 源码树与合并时 `main` 源码树一致；发布后仅追加本节交接证据，不改变插件源码或已构建二进制。
 - README 在线核对通过：1.2.0 中英双语说明与 Match Gain 截图存在，1.02 至 1.1.0 的历史更新内容均保留。
-- 根目录 `LICENSE` 为 GNU GPLv3 官方正文；README 明确项目采用 GPL-3.0-or-later。
+- 根目录 `LICENSE` 为 GNU Qing Audio NC Source-Share License 1.0 官方正文；README 明确项目采用 LicenseRef-Qing-Audio-NC-Source-Share-1.0。
 
 ### GitHub Actions
 
