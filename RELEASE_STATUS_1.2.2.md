@@ -5,7 +5,10 @@
 - Plan B: completed and frozen before public synchronization; never accessed in later stages.
 - Plan C: completed on 2026-11-17. Public shared source, all four platform ZIPs,
   bilingual installation guides and a verified desktop package have been delivered.
-- Plan D: Release publication is the next step.
+- Plan D: v1.2.2 is published as the latest, non-prerelease Release in this same
+  repository. All 6 uploaded asset byte counts and SHA-256 digests match the
+  verified desktop package; README and Release provide their API-returned URLs.
+- Release: https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/tag/v1.2.2
 - Windows: BS.1770 self-test, 122 processor/UI checks, 24 audio-equivalence cases,
   Steinberg loading/category validation, consistent version and installation hashes.
 - Native Apple Silicon and Intel VST3: both passed CTest 2/2 including 122 processor/UI checks.
@@ -40,7 +43,7 @@ Evidence: main 0b324f861e2399af45c54f5b7c6c39011b63fcf1 and Release v1.2.0.
 Actual intervening versions: 1.2.1, 1.2.2. Both are directly documented in README,
 CHANGELOG and individual development records; missing versions: none.
 
-中文：用户指定 1.2.2 Stable；A 复用、B 已冻结、C 完成，接下来执行同仓库 Release 的 D。
+中文：用户指定 1.2.2 Stable；A 复用、B 已冻结、C 完成，D 已发布同仓库正式 Release。
 Windows、Apple Silicon VST3、Intel VST3、Universal 2 AU 与双语说明共 6 文件已交付桌面，
 总计 21,437,382 字节，哈希一致。AU 在 Apple Silicon runner 上通过 auval；
 不冒充完整 Mac DAW 人工实测。许可保持 Qing Audio 非商业源码共享许可证 1.0。

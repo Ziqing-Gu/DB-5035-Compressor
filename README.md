@@ -36,14 +36,24 @@ The image shows Match in 1.2.0; 1.2.2 adds LUFS ON/OFF to the same strip. Vintag
 
 ## 3. 最新版本下载与说明书 / Latest downloads and manuals
 
-源码已更新至 **1.2.2 Stable**（2026-11-17）；跨平台成品与 Release 正在准备。当前已公开 Release 为 **1.2.0**。 / Source is **1.2.2 Stable** (2026-11-17); cross-platform artifacts and its Release are in preparation. The currently published Release is **1.2.0**.
+**当前正式版本 / Current release: 1.2.2 Stable · 2026-11-17**
 
-**[打开已发布的最新版 Release / Open the latest published Release](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/latest)**
+**[点击这里下载最新版 / Download the latest release](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/latest)**
 
-Windows 选择 x64 VST3；Apple Silicon 原生宿主选择 arm64 VST3，Intel 或 Rosetta 宿主选择 x86_64 VST3；Logic Pro 使用 Universal 2 AU。只安装所需格式和一套 VST3 架构。完整双语安装说明随 Release 提供；没有另附本版本 PDF 手册，参数说明和 Timing 表见插件 Help。
-Choose Windows x64 VST3, arm64 VST3 for native Apple Silicon hosts, x86_64 VST3 for Intel/Rosetta hosts, or Universal 2 AU for Logic Pro. Install only the required formats and one VST3 architecture. Bilingual installation guides accompany the Release. No separate PDF manual is provided for this version; parameter explanations and the Timing table are in Help.
+| 系统、架构或资料 / Platform or guide | 直接下载 / Direct download |
+|---|---|
+| Windows x64 · VST3 | [Windows x64 · VST3](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.2/DB-5035-Qing-Compressor-1.2.2-Windows-x64-VST3.zip) |
+| macOS Apple Silicon · VST3 | [macOS Apple Silicon · VST3](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.2/DB-5035-Qing-Compressor-1.2.2-macOS-Apple-Silicon-VST3.zip) |
+| macOS Intel / Rosetta · VST3 | [macOS Intel / Rosetta · VST3](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.2/DB-5035-Qing-Compressor-1.2.2-macOS-Intel-x86_64-VST3.zip) |
+| macOS Universal 2 · AU / Logic Pro | [macOS Universal 2 · AU / Logic Pro](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.2/DB-5035-Qing-Compressor-1.2.2-macOS-Universal-2-AU.zip) |
+| 安装说明（中文） | [安装说明（中文）](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.2/DB-5035-Qing-Compressor-1.2.2-Installation-Guide-Chinese.txt) |
+| Installation Guide (English) | [Installation Guide (English)](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.2/DB-5035-Qing-Compressor-1.2.2-Installation-Guide-English.txt) |
 
-GitHub 自动生成的 `Source code (zip)` / `Source code (tar.gz)` 是源码，不是可安装插件。 / GitHub's automatic source archives are not installable plug-ins.
+Windows 选 x64 VST3；Apple Silicon 原生宿主选 arm64 VST3，Intel/Rosetta 宿主选 x86_64 VST3，Logic Pro 选 Universal 2 AU。两套 Mac VST3 只装一套；按需要安装 AU。 / Choose Windows x64 VST3, arm64 VST3 for native Apple Silicon hosts, x86_64 VST3 for Intel/Rosetta hosts, or Universal 2 AU for Logic Pro. Install one Mac VST3 architecture and AU only if needed.
+
+完整中文与英文安装说明已在同一表格中列出。本版本不单独提供 PDF 手册，操作与 Timing 表见插件 Help。 / Full Chinese and English installation guides are in the table above. No separate PDF manual is provided; controls and the Timing table are in Help.
+
+**GitHub 自动生成的 `Source code (zip)` / `Source code (tar.gz)` 是源码，不是可安装插件。 / GitHub's automatically generated source archives are not installable plug-ins.**
 
 ### 安装与兼容性 / Installation and compatibility
 
@@ -53,6 +63,10 @@ Fully quit hosts, then replace the old complete bundle. Windows uses its system 
 Windows 支持 x64，建议 Windows 10/11；Mac 目标最低 macOS 11，需宿主支持对应架构和格式。Mac 为 ad-hoc 签名、未经过 Apple Developer ID 公证；只在确认来源可信后按安装说明处理隔离提示。自动验证不代表所有操作系统/DAW 组合均已实测。
 Windows requires x64 (Windows 10/11 recommended); Mac targets macOS 11+ and requires a host supporting the selected architecture/format. Mac bundles are ad-hoc signed, not Developer ID notarized; follow the trusted-source guidance in the installation guides if blocked. Automated validation does not establish compatibility with every OS/DAW combination.
 
+### 已完成验证 / Completed validation
+
+Windows 复用此前验证成品；Apple Silicon 与 Intel 的原生处理器测试各通过 122 项；Universal 2 AU 已通过 Apple Silicon `auval`。版本、架构、最低 macOS 11.0 目标、签名、ZIP 与哈希已核验；桌面用户包与 Release 的六份文件内容一致。不是所有 Mac 宿主的人工兼容性保证。 / Windows reuses its previously verified output; both native Mac processor suites passed 122 checks, and Universal 2 AU passed Apple Silicon `auval`. Version, architecture, macOS 11.0 minimum target, signature, ZIP integrity and hashes were checked. The desktop package and six Release assets have identical contents; this is not a guarantee of manual testing in every Mac host.
+
 ## 4. 逐版本更新记录 / Version history
 
 ### 1.2.2 — Stable：响度开关完善 / Loudness-toggle refinements
@@ -61,8 +75,8 @@ Windows requires x64 (Windows 10/11 recommended); Mac targets macOS 11+ and requ
 - English: Fixed a repeated reset at measurement start; legacy sessions explicitly default to ON; preset reload and rapid OFF→ON transitions discard stale measurements. The new parameter is appended with its own AU version hint to retain existing automation order. The command strip avoids overlap in narrow windows; Help, project and plug-in metadata report 1.2.2.
 - 中文：OFF 完全跳过播放头查询、测量副本、K-weighting、LUFS 统计和 Match 计算。Match 灰显且不可点击，但已应用的 Gain 不会自动撤回，压缩、Blend 和 VU 保持原行为。ON 重新累计播放期间的 Dry / 全 Wet 响度，至少一个 400 ms 测量块后可得到建议；点击 Match 写入 Gain。
 - English: OFF bypasses playhead polling, measurement copies, K-weighting, LUFS statistics and Match calculations. Match is greyed out and disabled; previously applied Gain is retained, with compression, Blend and VU unchanged. ON starts fresh Dry/full-Wet playback measurement; at least one 400 ms block is needed before a recommendation can be applied by clicking Match.
-- 中文：Windows 已完成 BS.1770 自测、122 项生产处理器/界面检查、24 组逐样本音频一致性检查及 Steinberg 加载/分类检查，已交付并由用户指定 Stable。Mac 三类成品由同源 CI 构建验证；具体结果随本次发布记录补充，不将自动检查等同于全部宿主实测。
-- English: Windows passed BS.1770 self-tests, 122 processor/UI checks, 24 bit-identical audio comparisons and Steinberg loading/category checks, and was delivered and designated Stable. Three Mac artifacts are built from the same source in CI; release records state the actual results. Automated validation is not comprehensive DAW testing.
+- 中文：Windows 已完成 BS.1770 自测、122 项生产处理器/界面检查、24 组逐样本音频一致性检查及 Steinberg 加载/分类检查，已交付并由用户指定 Stable。Mac 三类成品由同源 CI 构建并核验，两种 VST3 各通过 122 项检查，AU 通过 Apple Silicon auval；不将自动检查等同于全部宿主实测。
+- English: Windows passed BS.1770 self-tests, 122 processor/UI checks, 24 bit-identical audio comparisons and Steinberg loading/category checks, and was delivered and designated Stable. All three Mac artifacts were built and verified from the same source; each native VST3 passed 122 checks and AU passed Apple Silicon auval. Automated validation is not comprehensive DAW testing.
 - 中文：DSP、响度算法、资源、Gain 精度及原有插件标识均未更改。新开关随工程/预设保存，默认 ON；兼容 1.2.0 及更早状态。Mac 尚未经过 Apple Developer ID 公证。
 - English: DSP, loudness algorithm, resources, Gain precision and plug-in identity are unchanged. The new toggle is saved in sessions/presets and defaults to ON, including legacy states. Mac builds are not Apple Developer ID notarized.
 
