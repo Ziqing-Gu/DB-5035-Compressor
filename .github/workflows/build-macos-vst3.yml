@@ -1,6 +1,16 @@
 name: Build macOS VST3 and AU
 on:
   workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Source commit to build (empty means workflow commit)
+        type: string
+        required: false
+      targets:
+        description: Build only missing platform artifacts
+        type: choice
+        default: all
+        options: [all, arm64-and-au, intel]
 permissions:
   contents: read
 jobs:
@@ -10,25 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - label: Apple Silicon VST3
-            runner: macos-14
-            arch: arm64
-            format: VST3
-            extension: vst3
-            package: DB-5035-Qing-Compressor-1.2.2-macOS-Apple-Silicon-VST3
-          - label: Intel x86_64 VST3
-            runner: macos-15-intel
-            arch: x86_64
-            format: VST3
-            extension: vst3
-            package: DB-5035-Qing-Compressor-1.2.2-macOS-Intel-x86_64-VST3
-          - label: Universal 2 AU
-            runner: macos-14
-            arch: arm64;x86_64
-            format: AU
-            extension: component
-            package: DB-5035-Qing-Compressor-1.2.2-macOS-Universal-2-AU
+        include: ${{ fromJSON(inputs.targets == 'arm64-and-au' && '[{"label":"Apple Silicon VST3","runner":"macos-15","arch":"arm64","format":"VST3","extension":"vst3","package":"DB-5035-Qing-Compressor-1.2.2-macOS-Apple-Silicon-VST3"},{"label":"Universal 2 AU","runner":"macos-15","arch":"arm64;x86_64","format":"AU","extension":"component","package":"DB-5035-Qing-Compressor-1.2.2-macOS-Universal-2-AU"}]' || inputs.targets == 'intel' && '[{"label":"Intel x86_64 VST3","runner":"macos-15-intel","arch":"x86_64","format":"VST3","extension":"vst3","package":"DB-5035-Qing-Compressor-1.2.2-macOS-Intel-x86_64-VST3"}]' || '[{"label":"Apple Silicon VST3","runner":"macos-15","arch":"arm64","format":"VST3","extension":"vst3","package":"DB-5035-Qing-Compressor-1.2.2-macOS-Apple-Silicon-VST3"},{"label":"Intel x86_64 VST3","runner":"macos-15-intel","arch":"x86_64","format":"VST3","extension":"vst3","package":"DB-5035-Qing-Compressor-1.2.2-macOS-Intel-x86_64-VST3"},{"label":"Universal 2 AU","runner":"macos-15","arch":"arm64;x86_64","format":"AU","extension":"component","package":"DB-5035-Qing-Compressor-1.2.2-macOS-Universal-2-AU"}]') }}
     env:
       DB_VERSION: 1.2.2
       EXPECTED_ARCH: ${{ matrix.arch }}
@@ -36,6 +28,8 @@ jobs:
       BUNDLE: build-macos/DB5035Compressor_artefacts/Release/${{ matrix.format }}/DB-5035 Qing Compressor.${{ matrix.extension }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
       - name: Configure
         run: >
           cmake -S source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce
@@ -86,7 +80,8 @@ jobs:
           binary = bundle / "Contents/MacOS" / info["CFBundleExecutable"]
           package = pathlib.Path(os.environ["PACKAGE"] + ".zip")
           record = {
-            "commit": os.environ["GITHUB_SHA"],
+            "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+            "workflow_commit": os.environ["GITHUB_SHA"],
             "run_id": os.environ["GITHUB_RUN_ID"],
             "version": info["CFBundleShortVersionString"],
             "bundle_version": info["CFBundleVersion"],
