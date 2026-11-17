@@ -308,7 +308,7 @@ DB5035AudioProcessorEditor::HelpOverlay::HelpOverlay()
             onClose();
     };
 
-    helpContent.setSize (900, 600);
+    helpContent.setSize (900, 720);
     helpViewport.setViewedComponent (&helpContent, false);
     helpViewport.setScrollBarsShown (true, false);
     helpViewport.setOpaque (false);
@@ -381,6 +381,13 @@ void DB5035AudioProcessorEditor::HelpOverlay::HelpContent::paint (juce::Graphics
     drawHelpLine (g, content, utf8 (u8"大致为：Attack 约等于 Fast OFF 的 92%，Release 约等于 Fast OFF 的 87%。"), 12.4f, text, false, 19);
 
     content.removeFromTop (12);
+    drawHelpLine (g, content, "LOUDNESS MEASUREMENT / MATCH GAIN", 12.5f, cream, true, 18);
+    drawHelpLine (g, content, utf8 (u8"LUFS ON：宿主播放时测量 Dry 与全 Wet 信号的 Integrated LUFS。"), 12.4f, text, false, 19);
+    drawHelpLine (g, content, utf8 (u8"出现 M ±x.xx 后，单击 Match 即可把建议补偿写入 Gain。"), 12.4f, text, false, 19);
+    drawHelpLine (g, content, utf8 (u8"LUFS OFF：完全停止响度滤波、Dry/Wet 测量、统计和历史计算，同时禁用 Match。"), 12.4f, text, false, 19);
+    drawHelpLine (g, content, utf8 (u8"关闭测量不会改变压缩声音、Gain 或其它参数；重新打开会从零开始一次新测量。"), 12.4f, text, false, 19);
+
+    content.removeFromTop (12);
     drawHelpLine (g, content, "CONTROL TIPS", 12.5f, cream, true, 18);
     drawHelpLine (g, content, utf8 (u8"Shift + 鼠标拖动：微调参数。"), 12.4f, text, false, 19);
     drawHelpLine (g, content, utf8 (u8"双击旋钮或数值：手动输入精确数值。"), 12.4f, text, false, 19);
@@ -394,7 +401,7 @@ void DB5035AudioProcessorEditor::HelpOverlay::resized()
     auto header = content.removeFromTop (50);
     closeButton.setBounds (header.removeFromRight (88).withSizeKeepingCentre (78, 26));
     helpViewport.setBounds (content.reduced (0, 6));
-    helpContent.setSize (juce::jmax (860, helpViewport.getWidth() - 16), 600);
+    helpContent.setSize (juce::jmax (860, helpViewport.getWidth() - 16), 720);
 }
 
 DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& processor)
@@ -444,6 +451,7 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
     configureCommandButton (compareButtons[2], "A>B");
     configureCommandButton (helpButton, "HELP");
     configureCommandButton (oversamplingButton, "OS");
+    configureCommandButton (loudnessMeasurementButton, "LUFS ON");
     configureCommandButton (matchButton, "MATCH");
     historyButtons[0].button.onClick = [this] { audioProcessor.getUndoManager().undo(); updateUndoRedoButtons(); };
     historyButtons[1].button.onClick = [this] { audioProcessor.getUndoManager().redo(); updateUndoRedoButtons(); };
@@ -471,6 +479,11 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
             updateOversamplingButton();
         }
     };
+    loudnessMeasurementButton.button.setClickingTogglesState (true);
+    loudnessMeasurementButton.button.setTooltip (
+        utf8 (u8"响度测量开关：OFF 时完全停止 LUFS 测量并禁用 Match；重新 ON 时从零开始测量。"));
+    loudnessMeasurementAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (
+        audioProcessor.getValueTreeState(), "loudnessMeasurement", loudnessMeasurementButton.button);
     matchButton.button.onClick = [this]
     {
         audioProcessor.applyLoudnessMatch();
@@ -504,6 +517,8 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
     helpButton.name.setVisible (false);
     oversamplingButton.button.setLookAndFeel (&flatCommandLookAndFeel);
     oversamplingButton.name.setVisible (false);
+    loudnessMeasurementButton.button.setLookAndFeel (&flatCommandLookAndFeel);
+    loudnessMeasurementButton.name.setVisible (false);
     matchButton.button.setLookAndFeel (&flatCommandLookAndFeel);
     matchButton.name.setVisible (false);
 
@@ -588,6 +603,7 @@ DB5035AudioProcessorEditor::DB5035AudioProcessorEditor (DB5035AudioProcessor& pr
     updateUndoRedoButtons();
     updateCompareButtons();
     updateOversamplingButton();
+    updateLoudnessMeasurementButton();
     updateMatchButton();
 }
 
@@ -599,6 +615,7 @@ DB5035AudioProcessorEditor::~DB5035AudioProcessorEditor()
         cb.button.setLookAndFeel (nullptr);
     helpButton.button.setLookAndFeel (nullptr);
     oversamplingButton.button.setLookAndFeel (nullptr);
+    loudnessMeasurementButton.button.setLookAndFeel (nullptr);
     matchButton.button.setLookAndFeel (nullptr);
     uiStyleButton.setLookAndFeel (nullptr);
     vuModeButton.setLookAndFeel (nullptr);
@@ -901,10 +918,24 @@ void DB5035AudioProcessorEditor::layoutCommandStrip()
     compareButtons[2].button.setBounds (r); r.setX (r.getRight() + gap);
     helpButton.button.setBounds (r); r.setX (r.getRight() + gap);
     oversamplingButton.button.setBounds (r); r.setX (r.getRight() + gap);
+    loudnessMeasurementButton.button.setBounds (r.withWidth (76));
+    r.setX (loudnessMeasurementButton.button.getRight() + gap);
     // Vintage has no spare panel area. Keep Match in the shared command strip
     // and use a compact result label such as "M +3.24".
     matchButton.button.setBounds (r.withWidth (70));
-    uiStyleButton.setBounds (getWidth() - 118, startY, 115, cmdBtnH);
+    // Keep the new switch, Match and style selector reachable when the editor
+    // is smaller than the command row. The panel's existing resize limits stay.
+    const auto commandScale = juce::jmin (1.0f, (float) getWidth() / 640.0f);
+    uiStyleButton.setBounds (juce::roundToInt (getWidth() / commandScale) - 118,
+                            startY, 115, cmdBtnH);
+    const auto transform = juce::AffineTransform::scale (commandScale)
+        .translated (0.0f, commandStripHeight * (1.0f - commandScale) * 0.5f);
+    for (auto* button : { &historyButtons[0].button, &historyButtons[1].button,
+                          &compareButtons[0].button, &compareButtons[1].button,
+                          &compareButtons[2].button, &helpButton.button,
+                          &oversamplingButton.button, &loudnessMeasurementButton.button,
+                          &matchButton.button, &uiStyleButton })
+        button->setTransform (transform);
 }
 
 void DB5035AudioProcessorEditor::applyUiStyle (UiStyle style, bool resizeEditor)
@@ -1086,6 +1117,7 @@ void DB5035AudioProcessorEditor::timerCallback()
     updateUndoRedoButtons();
     updateCompareButtons();
     updateOversamplingButton();
+    updateLoudnessMeasurementButton();
     updateMatchButton();
 }
 
@@ -1385,8 +1417,9 @@ void DB5035AudioProcessorEditor::updateOversamplingButton()
 
 void DB5035AudioProcessorEditor::updateMatchButton()
 {
+    const auto measurementEnabled = audioProcessor.isLoudnessMeasurementEnabled();
     const auto ready = audioProcessor.hasMatchData();
-    matchButton.button.setEnabled (ready);
+    matchButton.button.setEnabled (measurementEnabled && ready);
 
     if (ready)
     {
@@ -1403,6 +1436,13 @@ void DB5035AudioProcessorEditor::updateMatchButton()
     {
         matchButton.button.setButtonText ("MATCH");
     }
+}
+
+void DB5035AudioProcessorEditor::updateLoudnessMeasurementButton()
+{
+    const auto enabled = audioProcessor.isLoudnessMeasurementEnabled();
+    loudnessMeasurementButton.button.setToggleState (enabled, juce::dontSendNotification);
+    loudnessMeasurementButton.button.setButtonText (enabled ? "LUFS ON" : "LUFS OFF");
 }
 
 void DB5035AudioProcessorEditor::ParameterSlider::setValueLabel (juce::Label* labelToUse)

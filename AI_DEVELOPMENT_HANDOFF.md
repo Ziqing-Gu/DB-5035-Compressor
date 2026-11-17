@@ -1,5 +1,21 @@
 # DB-5035 Qing Compressor — AI Development Handoff
 
+## 2026-11-17 当前状态 / Current state (supersedes historical status below)
+
+1.2.2 is Stable by explicit user decision. Windows Plan A was already delivered
+and installed; reuse it without rebuild/reinstallation. Plan B is completed and
+frozen; never access or refresh it during subsequent plans. Plan C includes the
+public source and Mac builds plus desktop delivery. Plan D publishes this same
+repository's Release. See [RELEASE_STATUS_1.2.2.md](RELEASE_STATUS_1.2.2.md),
+[DEVELOPMENT_HISTORY_1.2.1.md](DEVELOPMENT_HISTORY_1.2.1.md) and
+[DEVELOPMENT_HISTORY_1.2.2.md](DEVELOPMENT_HISTORY_1.2.2.md).
+The older status/Plan numbering below describes 1.2.0 history, not current completion.
+
+中文：用户已指定 1.2.2 Stable。Windows 结果复用；Plan B 已完成并冻结。
+当前 Plan C/D 进度见上述发布状态。每次改代码必须累积追加开发经过。
+下文旧稳定版本、旧 Plan 编号和进度仅是历史记录，不可视为当前版本状态。
+
+
 本文件是项目唯一的权威 AI 交接入口。详细旧过程保留在各版本开发记录中；后续只允许累积追加，不得删除或覆盖历史。
 
 ## 项目状态

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(DB5035Compressor VERSION 1.2.0)
+project(DB5035Compressor VERSION 1.2.2)
 
 option(DB5035_FETCH_JUCE "Download JUCE with CMake FetchContent" ON)
 option(DB5035_ENABLE_VINTAGE_UI "Build the optional hardware-inspired UI and its resources" ON)
@@ -36,7 +36,7 @@ juce_add_plugin(DB5035Compressor
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-    COPY_PLUGIN_AFTER_BUILD TRUE
+    COPY_PLUGIN_AFTER_BUILD FALSE
     PLUGIN_MANUFACTURER_CODE CdxA
     PLUGIN_CODE Db3Q
     FORMATS ${DB5035_PLUGIN_FORMATS}
@@ -100,3 +100,31 @@ target_link_libraries(DB5035Compressor
 if(DB5035_ENABLE_VINTAGE_UI)
     target_link_libraries(DB5035Compressor PRIVATE DB5035Resources)
 endif()
+
+enable_testing()
+
+add_executable(DB5035MatchSelfTest
+    tests/bs1770_match_selftest.cpp
+)
+
+target_compile_features(DB5035MatchSelfTest PRIVATE cxx_std_17)
+target_include_directories(DB5035MatchSelfTest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+
+if(MSVC)
+    target_compile_options(DB5035MatchSelfTest PRIVATE /utf-8)
+endif()
+
+add_test(NAME DB5035MatchSelfTest COMMAND DB5035MatchSelfTest)
+
+add_executable(DB5035ProcessorTest tests/processor_toggle_test.cpp)
+target_compile_features(DB5035ProcessorTest PRIVATE cxx_std_17)
+target_include_directories(DB5035ProcessorTest PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source"
+    "$<TARGET_PROPERTY:DB5035Compressor,INCLUDE_DIRECTORIES>")
+target_compile_definitions(DB5035ProcessorTest PRIVATE
+    "$<TARGET_PROPERTY:DB5035Compressor,COMPILE_DEFINITIONS>")
+target_link_libraries(DB5035ProcessorTest PRIVATE DB5035Compressor)
+if(MSVC)
+    target_compile_options(DB5035ProcessorTest PRIVATE /utf-8)
+endif()
+add_test(NAME DB5035ProcessorTest COMMAND DB5035ProcessorTest)

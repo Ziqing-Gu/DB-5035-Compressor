@@ -15,6 +15,7 @@ namespace ParamID
     constexpr auto fastMode = "fastMode";
     constexpr auto blend = "blend";
     constexpr auto oversampling = "oversampling";
+    constexpr auto loudnessMeasurement = "loudnessMeasurement";
 }
 
 namespace
@@ -125,6 +126,26 @@ DB5035AudioProcessor::DB5035AudioProcessor()
     uiPreferences = createUiPreferences();
     uiStyle = juce::jlimit (0, 1, uiPreferences->getIntValue (uiStylePreferenceKey, uiStyle));
     vuMode = juce::jlimit (0, 2, uiPreferences->getIntValue (vuModePreferenceKey, vuMode));
+    parameters.addParameterListener (ParamID::loudnessMeasurement, this);
+}
+
+DB5035AudioProcessor::~DB5035AudioProcessor()
+{
+    parameters.removeParameterListener (ParamID::loudnessMeasurement, this);
+}
+
+void DB5035AudioProcessor::parameterChanged (const juce::String& parameterID, float)
+{
+    if (parameterID != ParamID::loudnessMeasurement)
+        return;
+
+    // The actual accumulator reset stays on the audio thread. These atomics
+    // immediately invalidate the previous result and request a fresh run for
+    // the next block, regardless of whether the change came from the UI,
+    // automation, a preset, or restored project state.
+    matchReady.store (false, std::memory_order_relaxed);
+    matchMeasuring.store (false, std::memory_order_relaxed);
+    matchResetRequested.store (true, std::memory_order_release);
 }
 
 void DB5035AudioProcessor::setUiStyle (int style)
@@ -152,6 +173,7 @@ void DB5035AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
                          juce::jmax (1, getMainBusNumOutputChannels()),
                          juce::jmax (1, getBusCount (true) > 1 ? getChannelCountOfBus (true, 1) : getMainBusNumInputChannels()));
     resetMatchOnNextPlaybackBlock.store (true, std::memory_order_relaxed);
+    matchResetRequested.store (true, std::memory_order_release);
 }
 
 void DB5035AudioProcessor::releaseResources()
@@ -169,6 +191,7 @@ void DB5035AudioProcessor::releaseResources()
     resetMatchAccumulator();
     matchMeasuring.store (false, std::memory_order_relaxed);
     resetMatchOnNextPlaybackBlock.store (true, std::memory_order_relaxed);
+    matchResetRequested.store (true, std::memory_order_release);
     lastTransportPlaying = false;
     lastTransportSample = -1;
     lastTransportBlockSize = 0;
@@ -235,6 +258,11 @@ void DB5035AudioProcessor::processBlockInternal (juce::AudioBuffer<float>& buffe
 
     const auto currentParameters = readParameters();
 
+    const auto loudnessMeasurementEnabled = isLoudnessMeasurementEnabled();
+
+    // When measurement is OFF, do not touch the BS.1770 filters, statistics or
+    // accumulated history at all. Keep the reset request pending so that the
+    // next transition back to ON starts from a completely fresh measurement.
     const auto requestedOversamplingIndex = readOversamplingIndex();
     const auto sidechainChannels = sidechain != nullptr ? sidechain->getNumChannels() : mainBuffer.getNumChannels();
     if (requestedOversamplingIndex != activeOversamplingIndex
@@ -251,13 +279,19 @@ void DB5035AudioProcessor::processBlockInternal (juce::AudioBuffer<float>& buffe
 
     bool transportPlaying = false;
     int64_t transportSample = -1;
-    if (auto* playHead = getPlayHead())
+    if (loudnessMeasurementEnabled)
     {
-        if (auto position = playHead->getPosition())
+        if (matchNeedsPrepare)
+            prepareMatchMeasurement();
+
+        if (auto* hostPlayHead = getPlayHead())
         {
-            transportPlaying = position->getIsPlaying();
-            if (auto samplePosition = position->getTimeInSamples())
-                transportSample = *samplePosition;
+            if (auto position = hostPlayHead->getPosition())
+            {
+                transportPlaying = position->getIsPlaying();
+                if (auto samplePosition = position->getTimeInSamples())
+                    transportSample = *samplePosition;
+            }
         }
     }
 
@@ -271,17 +305,20 @@ void DB5035AudioProcessor::processBlockInternal (juce::AudioBuffer<float>& buffe
 
     const auto hostBypassed = forceHostBypass || readHostBypass();
     const auto bypassInputDb = hostBypassed ? measurePeakDb (mainBuffer) : -80.0f;
-    const auto matchEligible = ! hostBypassed && currentParameters.compIn;
+    const auto matchEligible = loudnessMeasurementEnabled && ! hostBypassed && currentParameters.compIn;
 
-    if (matchEligible && transportPlaying
-        && (! lastTransportPlaying
-            || ! lastMatchEligible
-            || transportDiscontinuity
-            || resetMatchOnNextPlaybackBlock.exchange (false, std::memory_order_relaxed)))
-    {
-        resetMatchAccumulator();
-    }
-    else if (! matchEligible && lastMatchEligible)
+    // Consume each request independently: short-circuiting an exchange behind
+    // "transport started" would leave it pending and reset again on block two.
+    const auto resetForMeasurementStateChange = loudnessMeasurementEnabled
+                                             && matchResetRequested.exchange (false, std::memory_order_acq_rel);
+    const auto resetForPlaybackRequest = matchEligible && transportPlaying
+                                      && resetMatchOnNextPlaybackBlock.exchange (false, std::memory_order_relaxed);
+    if (loudnessMeasurementEnabled
+        && (resetForMeasurementStateChange
+            || resetForPlaybackRequest
+            || (matchEligible && transportPlaying
+                && (! lastTransportPlaying || ! lastMatchEligible || transportDiscontinuity))
+            || (! matchEligible && lastMatchEligible)))
     {
         resetMatchAccumulator();
     }
@@ -454,10 +491,25 @@ void DB5035AudioProcessor::setStateInformation (const void* data, int sizeInByte
             auto stateTree = juce::ValueTree::fromXml (*state);
             const auto compareState = stateTree.getChildWithName (compareStateTag);
 
+            // APVTS stores parameters as PARAM children, not root properties.
+            // Explicitly populate the legacy default, including when loading
+            // an old preset into an instance whose switch is currently OFF.
+            if (! stateTree.getChildWithProperty ("id", ParamID::loudnessMeasurement).isValid())
+            {
+                juce::ValueTree measurementState ("PARAM");
+                measurementState.setProperty ("id", ParamID::loudnessMeasurement, nullptr);
+                measurementState.setProperty ("value", 1.0f, nullptr);
+                stateTree.appendChild (measurementState, nullptr);
+            }
+            stateTree.removeProperty (ParamID::loudnessMeasurement, nullptr);
+
             if (compareState.isValid())
                 stateTree.removeChild (compareState, nullptr);
 
             parameters.replaceState (stateTree);
+            // Loading a different project/preset must discard the old audio's
+            // measurement even if the switch's numeric value did not change.
+            parameterChanged (ParamID::loudnessMeasurement, 0.0f);
 
             if (compareState.isValid())
                 restoreCompareStateTree (compareState);
@@ -492,6 +544,17 @@ DiodeBridgeCompressorMeters DB5035AudioProcessor::consumeMeterPeaks()
     };
 }
 
+void DB5035AudioProcessor::prepareMatchMeasurement()
+{
+    const auto oversampledCapacity = preparedBlockSize * getOversamplingFactor();
+    matchDryBuffer.setSize (preparedMainChannels, preparedBlockSize, false, false, true);
+    matchWetBuffer.setSize (preparedMainChannels, preparedBlockSize, false, false, true);
+    oversampledMatchDryBuffer.setSize (preparedMainChannels, oversampledCapacity, false, false, true);
+    oversampledMatchWetBuffer.setSize (preparedMainChannels, oversampledCapacity, false, false, true);
+    loudnessMatch.prepare (preparedSampleRate * (double) getOversamplingFactor());
+    matchNeedsPrepare = false;
+}
+
 void DB5035AudioProcessor::resetMatchAccumulator() noexcept
 {
     loudnessMatch.reset();
@@ -512,6 +575,11 @@ void DB5035AudioProcessor::updateMatchResult() noexcept
 
 bool DB5035AudioProcessor::hasMatchData() const noexcept
 {
+    if (! isLoudnessMeasurementEnabled()
+        || matchResetRequested.load (std::memory_order_acquire)
+        || resetMatchOnNextPlaybackBlock.load (std::memory_order_relaxed))
+        return false;
+
     if (! matchReady.load (std::memory_order_relaxed))
         return false;
 
@@ -520,6 +588,15 @@ bool DB5035AudioProcessor::hasMatchData() const noexcept
             return false;
 
     return ! readHostBypass();
+}
+
+bool DB5035AudioProcessor::isLoudnessMeasurementEnabled() const noexcept
+{
+    if (auto* value = parameters.getRawParameterValue (ParamID::loudnessMeasurement))
+        return value->load (std::memory_order_relaxed) >= 0.5f;
+
+    jassertfalse;
+    return true;
 }
 
 bool DB5035AudioProcessor::applyLoudnessMatch()
@@ -722,10 +799,17 @@ DB5035AudioProcessor::APVTS::ParameterLayout DB5035AudioProcessor::createParamet
         juce::ParameterID { ParamID::oversampling, 1 }, "Oversampling",
         juce::StringArray { "1x", "2x", "4x", "8x" }, 0));
 
-    // Keep the host bypass parameter last so the indices of all 1.08
-    // parameters remain unchanged for existing projects and automation.
+    // Keep the host bypass parameter after the original sound controls so the
+    // indices of all 1.08 parameters remain unchanged for existing projects.
     params.push_back (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { ParamID::hostBypass, 1 }, "Bypass", false));
+
+    // Added after every 1.2.0 parameter so existing parameter indices, IDs,
+    // automation lanes, projects, and A/B snapshots remain unchanged.
+    // AU sorts by version hint first: old parameters use 1, so the new control
+    // uses 2 to preserve Logic/GarageBand automation order as well.
+    params.push_back (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { ParamID::loudnessMeasurement, 2 }, "Loudness Measurement", true));
 
     return { params.begin(), params.end() };
 }
@@ -808,13 +892,13 @@ void DB5035AudioProcessor::prepareOversampling (int oversamplingIndex,
     }
 
     compressor.prepare (preparedSampleRate * (double) getOversamplingFactor(), preparedMainChannels);
-    const auto oversampledCapacity = preparedBlockSize * getOversamplingFactor();
-    matchDryBuffer.setSize (preparedMainChannels, preparedBlockSize, false, false, true);
-    matchWetBuffer.setSize (preparedMainChannels, preparedBlockSize, false, false, true);
-    oversampledMatchDryBuffer.setSize (preparedMainChannels, oversampledCapacity, false, false, true);
-    oversampledMatchWetBuffer.setSize (preparedMainChannels, oversampledCapacity, false, false, true);
-    loudnessMatch.prepare (preparedSampleRate * (double) getOversamplingFactor());
-    compressor.resetMatchOutputTap();
+    // Measurement setup is also optional: a buffer-size/rate/oversampling
+    // reconfiguration while OFF must not initialise LUFS filters or history.
+    matchNeedsPrepare = true;
+    // Preserve normal prepareToPlay preallocation when enabled; only an OFF
+    // instance defers its optional measurement storage/filter setup.
+    if (isLoudnessMeasurementEnabled())
+        prepareMatchMeasurement();
     matchReady.store (false, std::memory_order_relaxed);
     matchMeasuring.store (false, std::memory_order_relaxed);
     resetMatchOnNextPlaybackBlock.store (true, std::memory_order_relaxed);

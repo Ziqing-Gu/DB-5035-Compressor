@@ -1,36 +1,79 @@
-# ⚠️ 禁止商业使用 / NO COMMERCIAL USE
-
-## Qing Audio 非商业源码共享许可证 1.0
-
-### 本项目源码公开，但不属于 OSI 认可的开源软件
-
-> **禁止任何商业使用。** 仅允许个人、学习、教育、研究、评估、爱好及其他非商业用途。发布原版或修改版时，必须同时免费公开完整对应源代码，保留作者、版权和许可证声明，醒目标明原项目名称、作者、来源链接、修改者、修改日期及修改内容，并使整个修改版继续采用同一许可证。完整条款见 [LICENSE](LICENSE)。
->
-> **NO COMMERCIAL USE.** Use is permitted only for personal, educational, research, evaluation, hobby, charitable, and other non-commercial purposes. Any distributed original or modified version must provide the complete corresponding source without charge, preserve authorship, copyright, and license notices, prominently identify the original project, author, source URL, modifier, date, and changes, and license the entire modified work under the same terms. See [LICENSE](LICENSE).
->
-> 许可证政策变更与后续 AI 维护说明见 [LICENSE_POLICY_CHANGE.md](LICENSE_POLICY_CHANGE.md)。 / See [LICENSE_POLICY_CHANGE.md](LICENSE_POLICY_CHANGE.md) for the policy record and future AI maintenance instructions.
-
 # DB-5035 Qing Compressor
 
-> 开发过程与 AI 交接记录：请先阅读 [DEVELOPMENT_HISTORY_1.1.0.md](DEVELOPMENT_HISTORY_1.1.0.md)。后续每次修改代码后都必须追加本次开发经过，不得覆盖旧记录。
-> 1.2.0 Match Gain 稳定基线的完整设计、验证与交接记录见 [DEVELOPMENT_HISTORY_1.2.0.md](DEVELOPMENT_HISTORY_1.2.0.md)。
-> 当前项目的权威 AI 交接文件为 [AI_DEVELOPMENT_HANDOFF.md](AI_DEVELOPMENT_HANDOFF.md)；开发历史只能累积追加，不得删除旧过程。
+Qing Audio · 1.2.2 Stable
 
-当前正式版本：`1.2.0`
+## 1. 产品介绍 / About the product
 
-## 下载 / Download
+DB-5035 Qing Compressor 是 Qing Audio 的二极管桥式动态压缩插件，用于人声、贝斯、打击乐与总线处理。它通过硬件测量反馈调整动态行为与染色，以 Ratio、Timing、Fast、侧链高通及 Blend 控制压缩；Classic 与 Vintage 双界面、过采样、Undo/Redo、双向 A/B 和 IN/OUT/REDUCTION VU 表让工作流更直观。
 
-**[点击这里进入官方 Release 下载页 / Open the official Release download page](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/latest)**
+DB-5035 Qing Compressor is Qing Audio's diode-bridge dynamics plug-in for vocals, bass, percussion and buses. Its dynamics and colour were refined using hardware measurement feedback, with Ratio, Timing, Fast, sidechain high-pass and Blend controls. Classic/Vintage interfaces, oversampling, Undo/Redo, bidirectional A/B and IN/OUT/REDUCTION VU metering support an intuitive workflow.
 
-不熟悉 GitHub 的用户可以直接按系统选择下面的文件；请不要下载 GitHub 自动生成的 `Source code (zip)` 或 `Source code (tar.gz)`，它们是源码，不是可直接安装的插件。 / If you are unfamiliar with GitHub, choose the file for your system below. Do not download GitHub's automatically generated `Source code (zip)` or `Source code (tar.gz)` files; those are source archives, not installable plug-ins.
+自动 Match Gain 在宿主播放期间比较 Dry 输入与 Gain/Blend 之前的全 Wet 信号的 Integrated LUFS，点击建议值即可写入精度为 0.01 dB 的 Gain。1.2.2 新增的 LUFS ON/OFF 可以完全停用这条测量和计算路径，而不改变音频处理。它匹配的是 Wet 补偿，不是 Blend 后的最终 Mix。
 
-- **Windows 64 位 VST3：** [DB-5035-Qing-Compressor-1.2.0-Windows-x64-VST3.zip](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-Windows-x64-VST3.zip)
-- **Apple Silicon Mac VST3（M1/M2/M3/M4）：** [DB-5035-Qing-Compressor-1.2.0-macOS-Apple-Silicon-VST3.zip](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-macOS-Apple-Silicon-VST3.zip)
-- **Intel Mac VST3：** [DB-5035-Qing-Compressor-1.2.0-macOS-Intel-x86_64-VST3.zip](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-macOS-Intel-x86_64-VST3.zip)
-- **Logic Pro / AU（Apple Silicon + Intel Universal 2）：** [DB-5035-Qing-Compressor-1.2.0-macOS-Universal-2-AU.zip](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-macOS-Universal-2-AU.zip)
-- **安装教程 / Installation guides：** [中文](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-Installation-Guide-Chinese.txt) · [English](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/download/v1.2.0/DB-5035-Qing-Compressor-1.2.0-Installation-Guide-English.txt)
+Automatic Match Gain compares Integrated LUFS of the Dry input and fully processed Wet signal before Gain/Blend during host playback. Click its recommendation to set Gain with 0.01 dB precision. The LUFS ON/OFF control in 1.2.2 can disable that measurement and calculation path without changing audio processing. It recommends Wet makeup, not a final post-Blend Mix target.
 
-## 1.2.0 更新 / What's new in 1.2.0
+![1.2.0 Match Gain 示例 / Match Gain example from 1.2.0](docs/images/db5035-match-gain-1.2.0.png)
+
+上图展示 1.2.0 的 Match，1.2.2 在同一命令条增加 LUFS ON/OFF。Vintage 界面贡献者：[tangshaozhu](https://github.com/tangshaozhu)，原始贡献见 [PR #3](https://github.com/Ziqing-Gu/DB-5035-Compressor/pull/3)；原旋钮拖动手感保留。
+The image shows Match in 1.2.0; 1.2.2 adds LUFS ON/OFF to the same strip. Vintage UI contribution: [tangshaozhu](https://github.com/tangshaozhu), [PR #3](https://github.com/Ziqing-Gu/DB-5035-Compressor/pull/3). The original knob drag response is retained.
+
+开发构建见 [BUILD.md](BUILD.md)，持续交接见 [AI_DEVELOPMENT_HANDOFF.md](AI_DEVELOPMENT_HANDOFF.md)；每次修改代码后必须追加开发经过，保留旧历史。 / See [BUILD.md](BUILD.md) and [AI_DEVELOPMENT_HANDOFF.md](AI_DEVELOPMENT_HANDOFF.md); every code update must append its development history.
+
+## 2. 许可证 / License
+
+### ⚠️ 禁止商业使用 / NO COMMERCIAL USE
+**Qing Audio 非商业源码共享许可证 1.0 / Qing Audio Non-Commercial Source-Share License 1.0**
+
+**本项目源码公开，但不属于 OSI 认可的开源软件。 / Source is available, but this is not OSI-approved open-source software.**
+
+> **禁止任何商业使用。** 仅允许个人、学习、教育、研究、评估、爱好及其他非商业用途。发布原版、二进制版或修改版时，必须同时免费公开完整对应源代码，保留作者、版权和许可证声明，醒目标明原项目名称、作者、来源链接、修改者、修改日期及修改内容，并使整个修改版继续采用同一许可证。完整条款见 [LICENSE](LICENSE)。
+>
+> **NO COMMERCIAL USE.** Use is permitted only for personal, educational, research, evaluation, hobby, charitable, and other non-commercial purposes. Any distributed original, binary, or modified version must provide the complete corresponding source without charge, preserve authorship, copyright, and license notices, prominently identify the original project, author, source URL, modifier, date, and changes, and license the entire modified work under the same terms. See [LICENSE](LICENSE).
+>
+> 许可证政策变更与后续 AI 维护说明见 [LICENSE_POLICY_CHANGE.md](LICENSE_POLICY_CHANGE.md)。 / See [LICENSE_POLICY_CHANGE.md](LICENSE_POLICY_CHANGE.md) for policy and future AI maintenance instructions.
+
+许可证标识为 `LicenseRef-Qing-Audio-NC-Source-Share-1.0`，没有 “or later” 选项。第三方许可独立适用，既有分发版本已授予的权利不变。 / Identifier: `LicenseRef-Qing-Audio-NC-Source-Share-1.0`, with no “or later” option. Third-party licenses remain separate; previously distributed copies retain rights already granted.
+
+## 3. 最新版本下载与说明书 / Latest downloads and manuals
+
+源码已更新至 **1.2.2 Stable**（2026-11-17）；跨平台成品与 Release 正在准备。当前已公开 Release 为 **1.2.0**。 / Source is **1.2.2 Stable** (2026-11-17); cross-platform artifacts and its Release are in preparation. The currently published Release is **1.2.0**.
+
+**[打开已发布的最新版 Release / Open the latest published Release](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases/latest)**
+
+Windows 选择 x64 VST3；Apple Silicon 原生宿主选择 arm64 VST3，Intel 或 Rosetta 宿主选择 x86_64 VST3；Logic Pro 使用 Universal 2 AU。只安装所需格式和一套 VST3 架构。完整双语安装说明随 Release 提供；没有另附本版本 PDF 手册，参数说明和 Timing 表见插件 Help。
+Choose Windows x64 VST3, arm64 VST3 for native Apple Silicon hosts, x86_64 VST3 for Intel/Rosetta hosts, or Universal 2 AU for Logic Pro. Install only the required formats and one VST3 architecture. Bilingual installation guides accompany the Release. No separate PDF manual is provided for this version; parameter explanations and the Timing table are in Help.
+
+GitHub 自动生成的 `Source code (zip)` / `Source code (tar.gz)` 是源码，不是可安装插件。 / GitHub's automatic source archives are not installable plug-ins.
+
+### 安装与兼容性 / Installation and compatibility
+
+完全退出宿主，再用完整 `DB-5035 Qing Compressor.vst3` bundle 替换旧版；Windows 系统目录为 `C:\Program Files\Common Files\VST3`。Mac VST3 用户目录为 `~/Library/Audio/Plug-Ins/VST3`，AU 为 `~/Library/Audio/Plug-Ins/Components`。不要在用户/系统目录保留重复副本；安装后重新扫描。
+Fully quit hosts, then replace the old complete bundle. Windows uses its system VST3 folder; macOS uses the user VST3 or Components folder above. Avoid duplicates in user and system locations, and rescan after installation.
+
+Windows 支持 x64，建议 Windows 10/11；Mac 目标最低 macOS 11，需宿主支持对应架构和格式。Mac 为 ad-hoc 签名、未经过 Apple Developer ID 公证；只在确认来源可信后按安装说明处理隔离提示。自动验证不代表所有操作系统/DAW 组合均已实测。
+Windows requires x64 (Windows 10/11 recommended); Mac targets macOS 11+ and requires a host supporting the selected architecture/format. Mac bundles are ad-hoc signed, not Developer ID notarized; follow the trusted-source guidance in the installation guides if blocked. Automated validation does not establish compatibility with every OS/DAW combination.
+
+## 4. 逐版本更新记录 / Version history
+
+### 1.2.2 — Stable：响度开关完善 / Loudness-toggle refinements
+**日期 / Date:** 2026-11-17. **状态 / Status:** Stable，用户明确指定 / explicitly designated by the user.
+- 中文：修复首次测量的重复清零；旧工程缺少开关时明确恢复为 ON；重新载入预设及快速 OFF→ON 后丢弃旧测量，不会误用旧建议。新增参数位于原参数之后，并使用独立 AU version hint，保持原参数自动化顺序。小窗口命令条避免重叠；Help、工程及插件版本统一为 1.2.2。
+- English: Fixed a repeated reset at measurement start; legacy sessions explicitly default to ON; preset reload and rapid OFF→ON transitions discard stale measurements. The new parameter is appended with its own AU version hint to retain existing automation order. The command strip avoids overlap in narrow windows; Help, project and plug-in metadata report 1.2.2.
+- 中文：OFF 完全跳过播放头查询、测量副本、K-weighting、LUFS 统计和 Match 计算。Match 灰显且不可点击，但已应用的 Gain 不会自动撤回，压缩、Blend 和 VU 保持原行为。ON 重新累计播放期间的 Dry / 全 Wet 响度，至少一个 400 ms 测量块后可得到建议；点击 Match 写入 Gain。
+- English: OFF bypasses playhead polling, measurement copies, K-weighting, LUFS statistics and Match calculations. Match is greyed out and disabled; previously applied Gain is retained, with compression, Blend and VU unchanged. ON starts fresh Dry/full-Wet playback measurement; at least one 400 ms block is needed before a recommendation can be applied by clicking Match.
+- 中文：Windows 已完成 BS.1770 自测、122 项生产处理器/界面检查、24 组逐样本音频一致性检查及 Steinberg 加载/分类检查，已交付并由用户指定 Stable。Mac 三类成品由同源 CI 构建验证；具体结果随本次发布记录补充，不将自动检查等同于全部宿主实测。
+- English: Windows passed BS.1770 self-tests, 122 processor/UI checks, 24 bit-identical audio comparisons and Steinberg loading/category checks, and was delivered and designated Stable. Three Mac artifacts are built from the same source in CI; release records state the actual results. Automated validation is not comprehensive DAW testing.
+- 中文：DSP、响度算法、资源、Gain 精度及原有插件标识均未更改。新开关随工程/预设保存，默认 ON；兼容 1.2.0 及更早状态。Mac 尚未经过 Apple Developer ID 公证。
+- English: DSP, loudness algorithm, resources, Gain precision and plug-in identity are unchanged. The new toggle is saved in sessions/presets and defaults to ON, including legacy states. Mac builds are not Apple Developer ID notarized.
+
+### 1.2.1 — 响度测量开关初版 / Initial loudness measurement toggle
+**日期 / Date:** 2026-11-17. **状态 / Status:** 已交付的开发版本，未单独发布 Release，已由 1.2.2 取代 / delivered development version, not separately released, superseded by 1.2.2.
+- 中文：Classic/Vintage 共用顶部新增 LUFS ON/OFF；OFF 禁用 Match 并停止响度测量/统计/计算；重新 ON 从零测量。开关随工程预设保存，缺失字段的旧工程使用 ON；Gain、Blend、VU、A/B 与压缩声音不受切换影响。CMake、Projucer、Help 和插件元数据为 1.2.1。
+- English: Added a shared Classic/Vintage LUFS ON/OFF control. OFF disables Match and stops loudness measurement/statistics/calculation; ON restarts measurement. The toggle is stored in sessions/presets, with ON for missing legacy fields; Gain, Blend, VU, A/B and compression audio are unaffected. CMake, Projucer, Help and plug-in metadata were 1.2.1.
+- 中文：实现位于 Windows/macOS VST3/AU 共用源码；当时仅交付 Windows 测试，恢复状态与测量启动细节随后在 1.2.2 中完善。
+- English: Implemented in the shared Windows/macOS VST3/AU sources; only a Windows test build was delivered then. State restoration and measurement-start details were subsequently refined in 1.2.2.
+
+### 1.2.0 更新 / What's new in 1.2.0
 
 **发布日期 / Release date:** 2026-08-26
 **状态 / Status:** Stable（用户已在 Windows 宿主完成测试并确认 / user-tested and approved on a Windows host）
@@ -39,7 +82,7 @@
 
 ![DB-5035 1.2.0 Match Gain：播放期间完成 LUFS 测量后，顶部按钮显示建议增益 M +3.65](docs/images/db5035-match-gain-1.2.0.png)
 
-### 中文
+#### 中文
 
 - **新增自动 Match Gain：** DB-5035 会在宿主播放期间，同时测量 Dry 输入与全 Wet 压缩信号的 Integrated LUFS，并计算需要补偿的 Gain。
 - **符合 BS.1770 / EBU R128：** 使用 K-weighting、400 ms 测量块、75% 重叠以及绝对/相对门限，不以 Peak、RMS 或瞬时响度代替长期响度匹配。
@@ -56,7 +99,7 @@
 2. 等待按钮由 `M...` 变成带正负号的建议值，例如 `M +3.65`。
 3. 点击该按钮，建议值会写入 Gain；如需重新测量，可停止后重新播放或移动播放位置。
 
-### English
+#### English
 
 - **New automatic Match Gain:** During host playback, DB-5035 measures the Integrated LUFS of the Dry input and the fully processed Wet signal, then calculates the required Gain compensation.
 - **BS.1770 / EBU R128 measurement:** It uses K-weighting, 400 ms blocks, 75% overlap, and absolute/relative gating instead of substituting peak, RMS, or momentary loudness.
@@ -73,55 +116,9 @@
 2. Wait until `M...` becomes a signed recommendation such as `M +3.65`.
 3. Click the button to write the recommendation to Gain. Stop/restart playback or move the playhead to begin a fresh measurement.
 
-## 产品、平台与格式 / Product, platforms, and formats
+### 1.1.0 更新 / What's new in 1.1.0
 
-- **产品 / Product:** DB-5035 Qing Compressor
-- **厂商 / Vendor:** Qing Audio
-- **Windows:** x64 VST3
-- **macOS:** Apple Silicon (`arm64`) VST3, Intel (`x86_64`) VST3, and Universal 2 Audio Unit (`arm64 + x86_64`)
-- **用途 / Purpose:** Hardware-inspired diode-bridge dynamics processing with Classic/Vintage interfaces, oversampling, A/B comparison, VU metering, and Integrated LUFS Match Gain.
-
-## 基本安装 / Basic installation
-
-### Windows x64 VST3
-
-1. 完全退出 Cubase、Nuendo、REAPER、Studio One 等宿主。 / Fully quit all plug-in hosts.
-2. 解压 Windows x64 VST3 包。 / Extract the Windows x64 VST3 archive.
-3. 将 `DB-5035 Qing Compressor.vst3` 复制到 `C:\Program Files\Common Files\VST3`，并在提示时覆盖旧版。 / Copy the bundle to the system VST3 folder and replace the older copy when prompted.
-4. 重新打开宿主并重新扫描 VST3。 / Reopen the host and rescan VST3 plug-ins.
-
-### macOS VST3 / AU
-
-- Apple Silicon Mac 选择 `arm64` VST3，Intel Mac 选择 `x86_64` VST3；两种 VST3 架构不要同时安装。 / Choose the VST3 archive that matches the Mac architecture and do not install both variants.
-- VST3 用户目录：`~/Library/Audio/Plug-Ins/VST3`。 / User VST3 folder.
-- AU 用户目录：`~/Library/Audio/Plug-Ins/Components`。 / User Audio Unit folder.
-- Universal 2 AU 同时包含 `arm64` 与 `x86_64`，用于 Logic Pro 等 AU 宿主。 / The Universal 2 AU supports both architectures and is intended for AU hosts such as Logic Pro.
-- macOS 成品可能采用临时/ad-hoc 签名且未经过 Apple Developer ID 公证；只在确认来源可信后处理系统隔离属性。 / macOS artifacts may be ad-hoc signed and not Apple-notarized; only remove quarantine after verifying the source.
-
-## 从源码构建 / Build from source
-
-- **Windows:** Visual Studio 2022 Build Tools with the C++ workload, CMake 3.22 or newer, and PowerShell. Run `source-vst3-aax-projucer-ui-fixes-20260614-194248\build-vst3.ps1`.
-- **macOS:** Xcode command-line tools and CMake 3.22 or newer. Configure `source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce` with `DB5035_FETCH_JUCE=ON`, select the required `CMAKE_OSX_ARCHITECTURES`, and build `DB5035Compressor_VST3` or `DB5035Compressor_AU`.
-- GitHub Actions includes Windows x64 VST3, macOS Apple Silicon VST3, macOS Intel VST3, and Universal 2 AU workflows.
-
-## 已知限制与兼容性 / Known limitations and compatibility
-
-- Match Gain needs host transport playback and at least one 400 ms BS.1770 measurement block before a result can become available.
-- Match compares Dry with fully processed Wet before user Gain and Blend; it is a Wet makeup recommendation, not a final mixed-output target.
-- Existing parameter IDs and order are preserved, but users should keep only one installed copy of the plug-in to avoid host cache ambiguity.
-- Windows x64 has been built, validator-tested, host-tested, and user-approved. macOS architecture/AU validation belongs to Plan D and must be reported separately from Windows verification.
-
-## 许可证 / License
-
-本项目第一方源码采用 **Qing Audio 非商业源码共享许可证 1.0**（`LicenseRef-Qing-Audio-NC-Source-Share-1.0`）。禁止任何商业使用。发布原版、二进制版或修改版时，必须同时免费公开完整对应源代码，保留作者、版权与许可证声明，注明原项目、作者、来源链接、修改者、修改日期及修改内容，并使整个修改版继续采用同一许可证。完整条款见 [LICENSE](LICENSE)。第三方组件继续适用其各自许可证。
-
-This project's first-party source is licensed under the **Qing Audio Non-Commercial Source-Share License 1.0** (`LicenseRef-Qing-Audio-NC-Source-Share-1.0`). Commercial use is prohibited. Distribution of the original, binary, or modified version requires the complete corresponding source at no charge, preserved authorship, copyright, and license notices, prominent identification of the original project, author, source URL, modifier, date, and changes, and the same license for the entire modified work. See [LICENSE](LICENSE). Third-party components remain under their respective licenses.
-
-Previously distributed copies retain rights already granted; this License applies to copies supplied with it.
-
-## 1.1.0 更新 / What's new in 1.1.0
-
-### 中文
+#### 中文
 
 - **修复 Fast Timing 大瞬态异响：** 解决部分 Vocal 大瞬态压缩瞬间出现的轻微爆裂、短促沙哑、“啪”声、高频毛刺和瞬间过载感。
 - **Transient Pass 平滑：** 最大放行量由 `0.98` 调整为 `0.65`；加入约 `0.20 ms` 的平滑进入与约 `1.0 ms` 的平滑退出，避免单采样点内发生接近全量的干湿切换。
@@ -129,7 +126,7 @@ Previously distributed copies retain rights already granted; this License applie
 - **硬件校准保持不变：** 其余 Ratio、Timing、压缩曲线、Dynamic Sag、染色和过采样算法没有改动。
 - **正式升级：** 恢复正式插件名称、Plugin Code 和 Bundle ID，1.1.0 会作为 1.09 的直接升级版被宿主识别；Help 同步显示 `Version 1.1.0`。
 
-### English
+#### English
 
 - **Fixed Fast Timing transient artefacts:** Removes occasional clicks, short rasp, HF splatter and overload-like distortion on unusually large vocal attacks.
 - **Smoothed Transient Pass:** Reduced its maximum from `0.98` to `0.65`, with an approximately `0.20 ms` rise and `1.0 ms` fall to prevent near-total dry/wet switching within one sample.
@@ -137,95 +134,83 @@ Previously distributed copies retain rights already granted; this License applie
 - **Calibration retained:** Other Ratio, Timing, compression-curve, Dynamic Sag, colour and oversampling behaviour is unchanged.
 - **Official upgrade identity:** The original product name, plug-in code and bundle ID are restored so 1.1.0 replaces 1.09 normally. Help reports `Version 1.1.0`.
 
-## Windows x64 构建
+### 1.09 更新 / What's new in 1.09
 
-在安装了 Visual Studio 2022 Build Tools（含 C++ 工作负载）的 Windows 电脑上，以
-PowerShell 运行：
-
-```powershell
-.\source-vst3-aax-projucer-ui-fixes-20260614-194248\build-vst3.ps1
-```
-
-脚本会构建 `DB-5035 Qing Compressor.vst3`，并在 `dist` 目录生成带时间戳
-的 zip 包。仓库也包含可手动运行的 Windows GitHub Actions 工作流。
-
-## 1.09 更新 / What's new in 1.09
-
-### 中文
+#### 中文
 
 - **修复过采样下的 DAW Bypass 时间偏移：** 新增由宿主识别的 Bypass 参数，并让旁通信号保持与当前过采样模式完全相同的已上报延迟。用于平行处理时，按下 DAW 的 Bypass 不再因为时间位置跳变而产生梳状滤波或相位失真。
 - **旁通切换不中断：** 延迟匹配的干声通道在插件正常工作时持续运行，按下 Bypass 时不会先出现一小段静音。
 - **压缩状态复位：** 关闭 `COMP IN` 时会完整清除包络与 Sidechain 检测历史，重新开启后不再继承关闭前的旧压缩状态。
 - **版本同步：** CMake、Projucer 和 Help 用户界面均已更新为 `Version 1.09`。
 
-### English
+#### English
 
 - **Fixed DAW bypass timing with oversampling:** Added a host-recognised bypass parameter and a dry path delayed by exactly the latency reported for the current oversampling mode. DAW bypass no longer jumps in time and causes comb filtering in parallel-processing workflows.
 - **Seamless bypass transition:** The latency-matched dry path is kept primed during normal processing, preventing a silent gap when bypass is engaged.
 - **Complete compressor-state reset:** Disabling `COMP IN` now clears envelope and sidechain detector history so stale gain reduction cannot return when compression is re-enabled.
 - **Synchronized version display:** CMake, Projucer, and the Help interface report `Version 1.09`.
 
-## 1.08 更新 / What's new in 1.08
+### 1.08 更新 / What's new in 1.08
 
-### 中文
+#### 中文
 
 - **品牌信息更新：** 插件厂商名称由 `Codex Audio` 更新为 `Qing Audio`，Help 和项目元数据同步调整。
 - **动态处理器分类：** VST3 元数据现在声明 `Fx / Dynamics`，使 Cubase、Nuendo 等宿主能够把 DB-5035 归入 Dynamics，而不是 Other。
 
-### English
+#### English
 
 - **Brand metadata update:** The plug-in manufacturer is now `Qing Audio`, with matching Help text and project metadata.
 - **Dynamics classification:** The VST3 metadata now declares `Fx / Dynamics`, allowing hosts such as Cubase and Nuendo to list DB-5035 under Dynamics instead of Other.
 
-## 1.07 更新 / What's new in 1.07
+### 1.07 更新 / What's new in 1.07
 
-### 中文
+#### 中文
 
 - **双向 A/B 复制：** 复制按钮会根据当前槽位显示 `A>B` 或 `B>A`；既可以把 A 复制到 B，也可以把 B 复制回 A，并在复制后自动切换到目标槽位。
 - **当前槽位提示：** 正在使用的 A 或 B 按钮会以琥珀色高亮和粗体文字显示，Classic 与 Vintage 两种界面都能清楚辨认当前状态。
 - **Help 版本布局修正：** 版本号移到标题下方的独立区域，不再被右上角的 Close 按钮遮挡。
 - **跨平台发布包：** Windows 提供 x64 VST3；macOS 提供 Apple Silicon VST3、Intel VST3 与同时兼容两种架构的 Universal 2 AU。
 
-### English
+#### English
 
 - **Bidirectional A/B copy:** The copy button follows the active slot and displays `A>B` or `B>A`. Either slot can be copied to the other, then the destination becomes active automatically.
 - **Clear active-slot feedback:** The active A or B button uses an amber highlight and bold text in both the Classic and Vintage interfaces.
 - **Help version layout fix:** The version number now has its own line below the title and can no longer be covered by the Close button.
 - **Cross-platform packages:** Windows includes an x64 VST3. macOS includes native Apple Silicon and Intel VST3 builds plus a Universal 2 AU compatible with both architectures.
 
-## 1.06 更新 / What's new in 1.06
+### 1.06 更新 / What's new in 1.06
 
-### 中文
+#### 中文
 
 - **Vintage VU 瞬态反馈：** 音频线程会保留两次 60 Hz 界面刷新之间出现的最高表值，避免短促音头被后续较安静的音频块覆盖，改善播放位置与表针反馈不一致的观感。
 - **保留硬件式指针手感：** 正常播放时继续使用此前依据真实硬件对比确定的 65 ms 上升与 110 ms 回落惯性；本次没有加快或改写这组校准参数。
 - **卡顿与模式切换修复：** 界面短暂阻塞后，表针会按真实经过时间追上目标；切换 IN、OUT 或 REDUCTION 时会从新模式的当前读数开始，不再继承上一模式的旧指针位置。
 - **版本信息、VST3 与 Logic AU：** Help 界面现在显示插件版本号；GitHub Actions 产物已更新为 1.06，并分别构建 Apple Silicon（arm64）和 Intel（x86_64）的 VST3 与 Logic 兼容 AU。
 
-### English
+#### English
 
 - **Vintage VU transient feedback:** The audio thread retains the highest meter value occurring between 60 Hz UI refreshes, so short attacks are not overwritten by a quieter block before the editor reads them.
 - **Hardware-style needle feel retained:** Normal playback still uses the previously hardware-referenced 65 ms attack and 110 ms return inertia; this release does not speed up or replace those calibrated values.
 - **Stall and mode-switch fixes:** The needle catches up using real elapsed time after a temporary UI stall. Switching between IN, OUT, and REDUCTION starts from the current reading for the new mode instead of inheriting the previous mode's needle position.
 - **Version display, VST3, and Logic AU:** Help now shows the plugin version. GitHub Actions artifacts are labeled 1.06 and build separate Apple Silicon (arm64) and Intel (x86_64) packages for both VST3 and the Logic-compatible AU format.
 
-## 1.05 更新 / What's new in 1.05
+### 1.05 更新 / What's new in 1.05
 
-### 中文
+#### 中文
 
 - **Vintage VU 表模式记忆：** `IN`、`OUT` 与 `REDUCTION` 的最后一次选择会作为本机偏好保存；新建实例、重开编辑器或重启宿主后，都会默认恢复该选择。
 - **状态恢复更可靠：** VU 表显示会在插件状态可用后自动同步。与 UI 模式相同，用户最后一次选择优先于旧 DAW 工程中残留的显示状态。
 - **原生 macOS 1.05 包：** GitHub Actions 工作流继续分别构建并校验 Apple Silicon（arm64）和 Intel（x86_64）VST3，产物名称已同步为 1.05。
 
-### English
+#### English
 
 - **Vintage VU mode memory:** The last selected `IN`, `OUT`, or `REDUCTION` view is saved as a local preference and restored for new instances, editor reopenings, and host restarts.
 - **Reliable state restoration:** The editor synchronizes the meter mode once plugin state is available. Like the UI-style preference, the user's latest choice takes precedence over stale display state stored by an older DAW project.
 - **Native macOS 1.05 packages:** GitHub Actions continues to build and validate separate Apple Silicon (arm64) and Intel (x86_64) VST3 packages; the artifact names now match version 1.05.
 
-## 1.04 更新 / What's new in 1.04
+### 1.04 更新 / What's new in 1.04
 
-### 中文
+#### 中文
 
 **1.04 汇集了 1.03 与 1.04 的改进；相较 1.02，重点如下：**
 
@@ -239,7 +224,7 @@ PowerShell 运行：
 <img width="400" height="226" alt="1 03VU Meter表现 00_00_10--00_00_26" src="https://github.com/user-attachments/assets/cbb0a99d-abc6-451d-96ab-36e886081501" />
 
 
-### English
+#### English
 
 **1.04 includes the 1.03 and 1.04 refinements. Compared with 1.02, it adds:**
 
@@ -249,9 +234,9 @@ PowerShell 运行：
 - **Vintage VU meter refinement:** The needle is driven by real-time gain reduction, refreshed at 60 Hz with a faster, more natural response. The peak-hold readout remains separate.
 - **Reliable resizing:** Corrects the geometry between Vintage's fixed top command strip and its scalable panel, preventing clipping and excessive unused black space at different window sizes.
 - **1.02 safeguards retained:** The readable Help layout, original knob-drag feel, and optional Classic-only build remain available.
-## 1.02 更新 / What's new in 1.02
+### 1.02 更新 / What's new in 1.02
 
-### 中文
+#### 中文
 
 1.02 是一次以 UI、可用性和跨平台构建为重点的更新。
 
@@ -265,7 +250,7 @@ PowerShell 运行：
 - **原生 macOS VST3 构建：** 仓库提供手动触发的 **Build macOS VST3** GitHub Actions 工作流，可分别生成 Apple Silicon（arm64）与 Intel（x86_64）原生 VST3 包，并在构建时校验二进制架构。
 - **贡献与资源说明：** Vintage UI 的设计和实现基础来自 GitHub 贡献者 [@tangshaozhu](https://github.com/tangshaozhu) 的 PR #3，相关提交历史已保留。Vintage UI 使用的 Open Sans 资源说明见 [`THIRD_PARTY_NOTICES.md`](source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce/THIRD_PARTY_NOTICES.md)。
 
-### English
+#### English
 
 Version 1.02 focuses on UI flexibility, usability, and cross-platform builds.
 
@@ -276,7 +261,7 @@ Version 1.02 focuses on UI flexibility, usability, and cross-platform builds.
 - **Native macOS VST3 builds:** The manual **Build macOS VST3** GitHub Actions workflow creates and validates separate native Apple Silicon (arm64) and Intel (x86_64) VST3 packages.
 - **Contribution and resources:** The Vintage UI design and implementation foundation comes from GitHub contributor [@tangshaozhu](https://github.com/tangshaozhu) via PR #3; the contributor history is preserved. See [`THIRD_PARTY_NOTICES.md`](source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce/THIRD_PARTY_NOTICES.md) for the Open Sans resource notice.
 
-## 1.0 版本 / Version 1.0
+### 1.0 版本 / Version 1.0
 
 本项目是一个建模自真实 Rupert Neve 5035 前级话放通道条的音频压缩插件。目前据我了解，市面上似乎没有任何一款音频插件是模仿或建模自这台世界顶尖的设备。
 
@@ -380,3 +365,8 @@ Enjoy!
 
 视频介绍(Vedio)：
 https://www.bilibili.com/video/BV1hfJL62E7E/?spm_id_from=333.1387.homepage.video_card.click&vd_source=755a32d6ff272ad1739298868f2881c9
+
+
+## 5. 历史版本下载 / Previous release downloads
+
+[全部历史 Release / All previous releases](https://github.com/Ziqing-Gu/DB-5035-Compressor/releases)

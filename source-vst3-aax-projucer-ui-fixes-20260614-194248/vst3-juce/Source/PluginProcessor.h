@@ -6,13 +6,14 @@
 #include "BS1770LoudnessMatch.h"
 #include "DiodeBridgeCompressor.h"
 
-class DB5035AudioProcessor final : public juce::AudioProcessor
+class DB5035AudioProcessor final : public juce::AudioProcessor,
+                                   private juce::AudioProcessorValueTreeState::Listener
 {
 public:
     using APVTS = juce::AudioProcessorValueTreeState;
 
     DB5035AudioProcessor();
-    ~DB5035AudioProcessor() override = default;
+    ~DB5035AudioProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -51,13 +52,20 @@ public:
     int getUiStyle() const { return uiStyle; }
     void setUiStyle (int style);
     bool hasMatchData() const noexcept;
-    bool isMatchMeasuring() const noexcept { return matchMeasuring.load (std::memory_order_relaxed); }
+    bool isMatchMeasuring() const noexcept
+    {
+        return isLoudnessMeasurementEnabled()
+            && ! matchResetRequested.load (std::memory_order_acquire)
+            && matchMeasuring.load (std::memory_order_relaxed);
+    }
     float getMatchGainDb() const noexcept { return matchGainDb.load (std::memory_order_relaxed); }
+    bool isLoudnessMeasurementEnabled() const noexcept;
     bool applyLoudnessMatch();
 
     static APVTS::ParameterLayout createParameterLayout();
 
 private:
+    friend struct DB5035ProcessorTestAccess;
     static constexpr size_t compareParameterCount = 10;
     using CompareSnapshot = std::array<float, compareParameterCount>;
 
@@ -71,6 +79,7 @@ private:
     void processBlockInternal (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, bool forceHostBypass);
     void processMatchBuffers (const juce::AudioBuffer<float>& dry, const juce::AudioBuffer<float>& wet) noexcept;
     void resetMatchAccumulator() noexcept;
+    void prepareMatchMeasurement();
     void updateMatchResult() noexcept;
     bool readHostBypass() const;
     void prepareLatencyMatchedBypass (int maximumChannels, int maximumBlockSize);
@@ -83,6 +92,7 @@ private:
     void applyCompareSnapshot (const CompareSnapshot& snapshot);
     juce::ValueTree createCompareStateTree() const;
     void restoreCompareStateTree (const juce::ValueTree& state);
+    void parameterChanged (const juce::String& parameterID, float newValue) override;
 
     juce::UndoManager undoManager;
     APVTS parameters;
@@ -109,9 +119,11 @@ private:
     int activeOversamplingIndex = 0;
     bool wasHostBypassed = false;
     db5035::BS1770LoudnessMatch loudnessMatch;
+    bool matchNeedsPrepare = true; // Audio-thread only; deferred while OFF.
     std::atomic<float> matchGainDb { 0.0f };
     std::atomic<bool> matchReady { false };
     std::atomic<bool> matchMeasuring { false };
+    std::atomic<bool> matchResetRequested { true };
     std::atomic<bool> resetMatchOnNextPlaybackBlock { true };
     bool lastTransportPlaying = false;
     int64_t lastTransportSample = -1;

@@ -1,32 +1,41 @@
-﻿name: Build macOS VST3 and AU
-
+name: Build macOS VST3 and AU
 on:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  build-vst3:
-    name: VST3 ${{ matrix.name }}
+  build-macos:
+    name: ${{ matrix.label }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Apple Silicon (arm64)
+          - label: Apple Silicon VST3
             runner: macos-14
-            expected_arch: arm64
-            artifact_name: DB-5035-Qing-Compressor-1.2.0-macOS-Apple-Silicon
-          - name: Intel (x86_64)
+            arch: arm64
+            format: VST3
+            extension: vst3
+            package: DB-5035-Qing-Compressor-1.2.2-macOS-Apple-Silicon-VST3
+          - label: Intel x86_64 VST3
             runner: macos-15-intel
-            expected_arch: x86_64
-            artifact_name: DB-5035-Qing-Compressor-1.2.0-macOS-Intel
-
+            arch: x86_64
+            format: VST3
+            extension: vst3
+            package: DB-5035-Qing-Compressor-1.2.2-macOS-Intel-x86_64-VST3
+          - label: Universal 2 AU
+            runner: macos-14
+            arch: arm64;x86_64
+            format: AU
+            extension: component
+            package: DB-5035-Qing-Compressor-1.2.2-macOS-Universal-2-AU
+    env:
+      DB_VERSION: 1.2.2
+      EXPECTED_ARCH: ${{ matrix.arch }}
+      PACKAGE: ${{ matrix.package }}
+      BUNDLE: build-macos/DB5035Compressor_artefacts/Release/${{ matrix.format }}/DB-5035 Qing Compressor.${{ matrix.extension }}
     steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Configure
         run: >
           cmake -S source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce
@@ -34,71 +43,71 @@ jobs:
           -DDB5035_FETCH_JUCE=ON
           -DDB5035_ENABLE_VINTAGE_UI=ON
           -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.expected_arch }}
-
-      - name: Build VST3
-        run: cmake --build build-macos --target DB5035Compressor_VST3 --config Release --parallel 3
-
-      - name: Verify architecture and package VST3
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          '-DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}'
+      - name: Build plug-in
+        run: cmake --build build-macos --target DB5035Compressor_${{ matrix.format }} --config Release --parallel 3
+      - name: Run native processor and loudness tests
+        if: matrix.format == 'VST3'
+        run: |
+          cmake --build build-macos --target DB5035MatchSelfTest DB5035ProcessorTest --config Release --parallel 3
+          ctest --test-dir build-macos --output-on-failure
+      - name: Verify version and architectures, ad-hoc sign
         shell: bash
         run: |
-          vst3='build-macos/DB5035Compressor_artefacts/Release/VST3/DB-5035 Qing Compressor.vst3'
-          vst3_binary=$(find "$vst3/Contents/MacOS" -type f -print -quit)
-          test -n "$vst3_binary"
-          lipo -archs "$vst3_binary" | tr ' ' '\n' | grep -Fx '${{ matrix.expected_arch }}'
-          ditto -c -k --keepParent "$vst3" '${{ matrix.artifact_name }}.vst3.zip'
-
-      - name: Upload packaged VST3
-        uses: actions/upload-artifact@v4
+          set -euo pipefail
+          binary="$BUNDLE/Contents/MacOS/DB-5035 Qing Compressor"
+          test -f "$binary"
+          actual=$(lipo -archs "$binary" | tr ' ' '\n' | sort | tr '\n' ' ')
+          expected=$(printf '%s' "$EXPECTED_ARCH" | tr ';' '\n' | sort | tr '\n' ' ')
+          test "$actual" = "$expected"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$BUNDLE/Contents/Info.plist")" = "$DB_VERSION"
+          codesign --force --deep --sign - --timestamp=none "$BUNDLE"
+          codesign --verify --deep --strict --verbose=2 "$BUNDLE"
+          lipo -archs "$binary"
+          xcrun vtool -show-build "$binary"
+      - name: Install and validate AU on native runner
+        if: matrix.format == 'AU'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
+          ditto "$BUNDLE" "$HOME/Library/Audio/Plug-Ins/Components/DB-5035 Qing Compressor.component"
+          auval -v aufx Db3Q CdxA | tee auval.txt
+      - name: Package and record build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          ditto -c -k --keepParent "$BUNDLE" "$PACKAGE.zip"
+          python3 - <<'PY'
+          import os, pathlib, plistlib, hashlib, json, subprocess
+          bundle = pathlib.Path(os.environ["BUNDLE"])
+          info = plistlib.loads((bundle / "Contents/Info.plist").read_bytes())
+          binary = bundle / "Contents/MacOS" / info["CFBundleExecutable"]
+          package = pathlib.Path(os.environ["PACKAGE"] + ".zip")
+          record = {
+            "commit": os.environ["GITHUB_SHA"],
+            "run_id": os.environ["GITHUB_RUN_ID"],
+            "version": info["CFBundleShortVersionString"],
+            "bundle_version": info["CFBundleVersion"],
+            "architectures": subprocess.check_output(["lipo", "-archs", str(binary)], text=True).strip().split(),
+            "deployment_target": "11.0",
+            "signing": "ad-hoc; not Developer ID notarized",
+            "zip": package.name,
+            "bytes": package.stat().st_size,
+            "sha256": hashlib.sha256(package.read_bytes()).hexdigest(),
+            "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest()
+          }
+          pathlib.Path("validation.json").write_text(json.dumps(record, indent=2) + "\n")
+          print(json.dumps(record, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}-VST3
-          path: ${{ matrix.artifact_name }}.vst3.zip
+          name: ${{ matrix.package }}
+          path: |
+            ${{ matrix.package }}.zip
+            validation.json
+            auval.txt
+            build-macos/Testing/Temporary/LastTest.log
           if-no-files-found: error
-          retention-days: 7
-
-  build-au:
-    name: AU Universal 2 (arm64 + x86_64)
-    runs-on: macos-14
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Configure Universal 2
-        run: >
-          cmake -S source-vst3-aax-projucer-ui-fixes-20260614-194248/vst3-juce
-          -B build-macos-au
-          -DDB5035_FETCH_JUCE=ON
-          -DDB5035_ENABLE_VINTAGE_UI=ON
-          -DCMAKE_BUILD_TYPE=Release
-          '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'
-
-      - name: Build Universal 2 AU
-        run: cmake --build build-macos-au --target DB5035Compressor_AU --config Release --parallel 3
-
-      - name: Validate AU for Logic
-        shell: bash
-        run: |
-          killall -9 AudioComponentRegistrar || true
-          auval -v aufx Db3Q CdxA
-
-      - name: Verify both architectures and package AU
-        shell: bash
-        run: |
-          au='build-macos-au/DB5035Compressor_artefacts/Release/AU/DB-5035 Qing Compressor.component'
-          au_binary=$(find "$au/Contents/MacOS" -type f -print -quit)
-          test -n "$au_binary"
-          archs=$(lipo -archs "$au_binary")
-          printf '%s\n' "$archs"
-          printf '%s\n' "$archs" | tr ' ' '\n' | grep -Fx arm64
-          printf '%s\n' "$archs" | tr ' ' '\n' | grep -Fx x86_64
-          ditto -c -k --keepParent "$au" 'DB-5035-Qing-Compressor-1.2.0-macOS-Universal-AU.component.zip'
-
-      - name: Upload packaged AU
-        uses: actions/upload-artifact@v4
-        with:
-          name: DB-5035-Qing-Compressor-1.2.0-macOS-Universal-AU
-          path: DB-5035-Qing-Compressor-1.2.0-macOS-Universal-AU.component.zip
-          if-no-files-found: error
-          retention-days: 7
-
+          retention-days: 14

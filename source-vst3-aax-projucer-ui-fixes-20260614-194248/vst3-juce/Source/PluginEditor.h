@@ -326,6 +326,7 @@ private:
     void updateUndoRedoButtons();
     void updateCompareButtons();
     void updateOversamplingButton();
+    void updateLoudnessMeasurementButton();
     void updateMatchButton();
     void updateVuModeFromProcessor();
 
@@ -350,7 +351,9 @@ private:
     std::array<CommandButtonControl, 3> compareButtons;
     CommandButtonControl helpButton;
     CommandButtonControl oversamplingButton;
+    CommandButtonControl loudnessMeasurementButton;
     CommandButtonControl matchButton;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> loudnessMeasurementAttachment;
     juce::TextButton uiStyleButton;
     HelpOverlay helpOverlay;
     VUMeter vuMeter;
