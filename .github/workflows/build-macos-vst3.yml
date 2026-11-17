@@ -60,18 +60,6 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$BUNDLE"
           lipo -archs "$binary"
           xcrun vtool -show-build "$binary"
-      - name: Install and validate AU on native runner
-        if: matrix.format == 'AU'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
-          ditto "$BUNDLE" "$HOME/Library/Audio/Plug-Ins/Components/DB-5035 Qing Compressor.component"
-          /usr/libexec/PlistBuddy -c 'Print :AudioComponents' "$BUNDLE/Contents/Info.plist"
-          killall -u "$(id -un)" AudioComponentRegistrar || true
-          sleep 2
-          auval -a | tee au-components.txt
-          auval -v aufx Db3Q CdxA | tee auval.txt
       - name: Package and record build identity
         shell: bash
         run: |
@@ -100,13 +88,40 @@ jobs:
           pathlib.Path("validation.json").write_text(json.dumps(record, indent=2) + "\n")
           print(json.dumps(record, indent=2))
           PY
+      - name: Install and validate AU on native runner
+        if: matrix.format == 'AU'
+        shell: bash
+        run: |
+          set -euo pipefail
+          installed="$HOME/Library/Audio/Plug-Ins/Components/DB-5035 Qing Compressor.component"
+          mkdir -p "$(dirname "$installed")"
+          ditto "$BUNDLE" "$installed"
+          /usr/libexec/PlistBuddy -c 'Print :AudioComponents' "$installed/Contents/Info.plist"
+          codesign --verify --deep --strict --verbose=2 "$installed"
+          killall -9 -u "$(id -un)" AudioComponentRegistrar || true
+          for attempt in 1 2 3; do
+            sleep 3
+            auval -a | tee au-components.txt
+            if grep -q 'aufx Db3Q CdxA' au-components.txt; then break; fi
+          done
+          if ! grep -q 'aufx Db3Q CdxA' au-components.txt; then
+            echo "User-scope component not registered; testing standard system installation on this disposable runner."
+            sudo mkdir -p /Library/Audio/Plug-Ins/Components
+            sudo ditto "$BUNDLE" "/Library/Audio/Plug-Ins/Components/DB-5035 Qing Compressor.component"
+            sudo killall -9 AudioComponentRegistrar || true
+            sleep 3
+            auval -a | tee au-components-system.txt
+          fi
+          auval -v aufx Db3Q CdxA | tee auval.txt
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ${{ matrix.package }}
           path: |
             ${{ matrix.package }}.zip
             validation.json
             auval.txt
+            au-components*.txt
             build-macos/Testing/Temporary/LastTest.log
           if-no-files-found: error
           retention-days: 14
