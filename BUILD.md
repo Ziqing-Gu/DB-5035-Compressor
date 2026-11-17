@@ -42,8 +42,8 @@ checked; this is not a claim of real Intel Logic testing or Apple notarization.
 ## Source identity / 同源
 
 The public source files, tests, resources, project metadata and vendored dependency
-match the Windows 1.2.2 source. The only CMake relocation is the sibling path to
-clap-juce-extensions; this preserves the public repository's existing layout.
+match the Windows 1.2.2 source. The CMake relocations are the sibling path to
+clap-juce-extensions and lowercase tests directory, preserving the public layout.
 No compressor DSP, loudness algorithm or resource was changed for release.
 
 Windows ZIP SHA-256:
@@ -51,3 +51,10 @@ Windows ZIP SHA-256:
 
 The formal source snapshot is a completed frozen historical record; subsequent
 publishing never uses it as a mutable workspace or verification source.
+
+CI now uses macos-15 / macos-15-intel, as macos-14 is retired. AU discovery requires
+a force refresh of AudioComponentRegistrar on the disposable runner after copying
+the component. The 1.2.2 user-directory installation passed native auval after that
+refresh; no system-folder fallback was needed. The workflow supports source_ref and
+platform selection to recover only missing builds, and retains signed artifacts
+if validation fails for diagnosis. Never publish an artifact merely because it exists.
